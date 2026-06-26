@@ -1,4 +1,8 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Force IPv4 first since Render often has issues connecting to Gmail via IPv6 (ENETUNREACH)
+dns.setDefaultResultOrder('ipv4first');
 
 const sendEmail = async (options) => {
   const isDefaultOrEmpty = !process.env.EMAIL_USER || 
