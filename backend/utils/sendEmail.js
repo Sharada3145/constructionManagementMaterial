@@ -1,14 +1,11 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns');
 
-// Force IPv4 first since Render often has issues connecting to Gmail via IPv6 (ENETUNREACH)
-dns.setDefaultResultOrder('ipv4first');
-
 const sendEmail = async (options) => {
-  // If no SendGrid API key is provided, log to console for development
-  if (!process.env.SENDGRID_API_KEY) {
+  // If no API key is provided, log to console for development
+  if (!process.env.SENDGRID_API_KEY && !process.env.BREVO_API_KEY) {
     console.log('\n==================================================');
-    console.log('⚠️  SENDGRID_API_KEY NOT CONFIGURED (USING DEVELOPMENT LOG MODE)');
+    console.log('⚠️  NO EMAIL API KEY CONFIGURED (USING DEVELOPMENT LOG MODE)');
     console.log(`To:      ${options.email}`);
     console.log(`Subject: ${options.subject}`);
     console.log('Content:');
@@ -17,27 +14,52 @@ const sendEmail = async (options) => {
     return;
   }
 
-  // Use fetch to call SendGrid's HTTP API (bypasses Render SMTP blocks)
-  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: options.email }] }],
-      from: { 
-        email: process.env.EMAIL_USER, 
-        name: 'Construction Material Management' 
+  if (process.env.BREVO_API_KEY) {
+    // Use Brevo API
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json'
       },
-      subject: options.subject,
-      content: [{ type: 'text/html', value: options.html }]
-    })
-  });
+      body: JSON.stringify({
+        sender: { email: process.env.EMAIL_USER, name: 'Construction Material Management' },
+        to: [{ email: options.email }],
+        subject: options.subject,
+        htmlContent: options.html
+      })
+    });
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(`SendGrid Error (${response.status}): ${errorData}`);
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Brevo Error (${response.status}): ${errorData}`);
+    }
+    return;
+  }
+
+  // Use SendGrid API
+  if (process.env.SENDGRID_API_KEY) {
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: options.email }] }],
+        from: { 
+          email: process.env.EMAIL_USER, 
+          name: 'Construction Material Management' 
+        },
+        subject: options.subject,
+        content: [{ type: 'text/html', value: options.html }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`SendGrid Error (${response.status}): ${errorData}`);
+    }
   }
 };
 
