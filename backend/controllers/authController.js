@@ -231,21 +231,13 @@ const forgotPassword = async (req, res, next) => {
       <p>If you did not request this, please ignore this email.</p>
     `;
 
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'CMMS Password Reset Token',
-        html: message,
-      });
+    // Bypass email provider and return the link directly for demo purposes
+    res.status(200).json({ 
+      success: true, 
+      message: 'Reset link generated', 
+      resetLink: resetUrl 
+    });
 
-      res.status(200).json({ success: true, message: 'Email sent' });
-    } catch (err) {
-      console.error(err);
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpire = undefined;
-      await user.save({ validateBeforeSave: false });
-      return res.status(500).json({ success: false, message: 'Email could not be sent', error: String(err) });
-    }
   } catch (error) {
     next(error);
   }

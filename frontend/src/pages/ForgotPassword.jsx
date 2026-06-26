@@ -8,6 +8,7 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [resetLink, setResetLink] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,6 +17,7 @@ const ForgotPassword = () => {
     try {
       const res = await axiosInstance.post('/auth/forgotpassword', { email });
       if (res.data.success) {
+        if (res.data.resetLink) setResetLink(res.data.resetLink);
         setSubmitted(true);
       }
     } catch (error) {
@@ -48,10 +50,17 @@ const ForgotPassword = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-slate-900">Check your email</h3>
+              <h3 className="text-lg font-medium text-slate-900">Reset link generated</h3>
               <p className="mt-2 text-sm text-slate-500">
-                We've sent a password reset link to <span className="font-semibold">{email}</span>.
+                Click the button below to reset the password for <span className="font-semibold">{email}</span>.
               </p>
+              {resetLink && (
+                <div className="mt-6">
+                  <a href={resetLink} className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    Open Reset Link
+                  </a>
+                </div>
+              )}
               <div className="mt-6">
                 <Link to="/login" className="text-sm font-medium text-primary-600 hover:text-primary-500">
                   Return to login
