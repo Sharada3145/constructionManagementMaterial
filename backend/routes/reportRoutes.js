@@ -7,6 +7,11 @@ const {
   generateBulkPurchaseReport,
   generateStockReport,
   generateSystemSummary,
+  generateCompanyBranchPerformance,
+  generateCompanyPurchaseOverview,
+  generateCompanyMaterialConsumption,
+  generateCompanyStockSummary,
+  generateCompanyExecutiveSummary,
 } = require('../controllers/reportController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -20,7 +25,7 @@ router.get('/issue/:id', generateIssueReport);
 // GET /api/reports/purchase/:id — Purchase Receipt PDF (Transaction _id)
 router.get('/purchase/:id', generatePurchaseReport);
 
-// ── Bulk / Filtered reports (new) ─────────────────────────────────────────────
+// ── Bulk / Filtered reports (existing) ────────────────────────────────────────
 // GET /api/reports/issues — Bulk Issue Report (admin/manager: all, contractor: own only)
 router.get('/issues', authorize('admin', 'manager', 'contractor'), generateBulkIssueReport);
 
@@ -32,5 +37,12 @@ router.get('/stock', authorize('admin', 'manager'), generateStockReport);
 
 // GET /api/reports/system-summary — Executive System Summary (admin only)
 router.get('/system-summary', authorize('admin'), generateSystemSummary);
+
+// ── Company-Level Reports (Admin Only) ────────────────────────────────────────
+router.get('/company/branch-performance', authorize('admin'), generateCompanyBranchPerformance);
+router.get('/company/purchase-overview', authorize('admin'), generateCompanyPurchaseOverview);
+router.get('/company/material-consumption', authorize('admin'), generateCompanyMaterialConsumption);
+router.get('/company/stock-summary', authorize('admin'), generateCompanyStockSummary);
+router.get('/company/executive-summary', authorize('admin'), generateCompanyExecutiveSummary);
 
 module.exports = router;

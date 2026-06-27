@@ -147,14 +147,77 @@ const useReportDownload = () => {
    */
   const isDownloading = (key) => !!downloading[key];
 
+  // ── Company-level report downloads (new) ────────────────────────────────────
+
+  const downloadCompanyBranchPerformance = (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.branchId) query.set('branchId', params.branchId);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const qs = query.toString();
+    return fetchAndOpen(
+      `/reports/company/branch-performance${qs ? `?${qs}` : ''}`,
+      `branch-performance-report.pdf`,
+      'company-perf'
+    );
+  };
+
+  const downloadCompanyPurchaseOverview = (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.branchId) query.set('branchId', params.branchId);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const qs = query.toString();
+    return fetchAndOpen(
+      `/reports/company/purchase-overview${qs ? `?${qs}` : ''}`,
+      `purchase-overview-report.pdf`,
+      'company-purch'
+    );
+  };
+
+  const downloadCompanyMaterialConsumption = (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.branchId) query.set('branchId', params.branchId);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const qs = query.toString();
+    return fetchAndOpen(
+      `/reports/company/material-consumption${qs ? `?${qs}` : ''}`,
+      `material-consumption-report.pdf`,
+      'company-cons'
+    );
+  };
+
+  const downloadCompanyStockSummary = () => {
+    return fetchAndOpen(
+      `/reports/company/stock-summary`,
+      `company-stock-summary.pdf`,
+      'company-stock'
+    );
+  };
+
+  const downloadCompanyExecutiveSummary = () => {
+    return fetchAndOpen(
+      `/reports/company/executive-summary`,
+      `company-executive-summary.pdf`,
+      'company-exec'
+    );
+  };
+
   return {
+    downloading,
+    isDownloading,
     downloadIssueReport,
     downloadPurchaseReport,
     downloadBulkIssueReport,
     downloadBulkPurchaseReport,
     downloadStockReport,
     downloadSystemSummary,
-    isDownloading,
+    downloadCompanyBranchPerformance,
+    downloadCompanyPurchaseOverview,
+    downloadCompanyMaterialConsumption,
+    downloadCompanyStockSummary,
+    downloadCompanyExecutiveSummary,
   };
 };
 

@@ -22,7 +22,7 @@ import TransactionHistory from './pages/TransactionHistory';
 import SupplierManagement from './pages/SupplierManagement';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import ContractorAnalytics from './pages/ContractorAnalytics';
-import ReportsCenter from './pages/ReportsCenter';
+import ReportsPage from './pages/ReportsPage';
 import BranchManagement from './pages/BranchManagement';
 import AllBranchesDashboard from './pages/AllBranchesDashboard';
 
@@ -85,7 +85,7 @@ const AppRoutes = () => {
         <Route path="my-issues" element={<ProtectedRoute allowedRoles={['contractor']}><MyIssuedMaterials /></ProtectedRoute>} />
 
         {/* Shared Routes */}
-        <Route path="reports" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'contractor']}><ReportsCenter /></ProtectedRoute>} />
+        <Route path="reports" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'contractor']}><ReportsPage /></ProtectedRoute>} />
       </Route>
 
       <Route path="/unauthorized" element={

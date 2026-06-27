@@ -3,6 +3,7 @@ const MaterialRequest = require('../models/MaterialRequest');
 const Transaction = require('../models/Transaction');
 const Material = require('../models/Material');
 const User = require('../models/User');
+const Branch = require('../models/Branch');
 const { getBranchFilter } = require('../middleware/auth');
 
 // ─── Shared PDF helpers ────────────────────────────────────────────────────────
@@ -978,4 +979,401 @@ module.exports = {
   generateBulkPurchaseReport,
   generateStockReport,
   generateSystemSummary,
+};
+
+// ── Company-Level Reports (Admin Only) ────────────────────────────────────────
+
+// Helper to init document
+const initCompanyReport = (res, title, filename) => {
+  const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  doc.pipe(res);
+  drawWatermark(doc);
+  drawHeader(doc, 'COMPANY OVERVIEW', title, `REP-${Date.now().toString().slice(-6)}`, fmtDate(new Date()));
+  return doc;
+};
+
+// 1. Branch Performance Report
+const generateCompanyBranchPerformance = async (req, res, next) => {
+  try {
+    const { startDate, endDate, branchId } = req.query;
+    const doc = initCompanyReport(res, 'Branch Performance Report', 'branch-performance.pdf');
+
+    let dateMatch = {};
+    if (startDate && endDate) {
+      dateMatch = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate + 'T23:59:59.999Z') } };
+    }
+    
+    let branchMatch = { status: 'active' };
+    if (branchId) {
+      branchMatch._id = new require('mongoose').Types.ObjectId(branchId);
+    }
+
+    const branches = await Branch.find(branchMatch);
+    
+    let y = 140;
+    y = sectionLabel(doc, 'Branch Comparison Overview', y);
+    y += 5;
+
+    const columns = [
+      { label: 'Branch Name', weight: 2 },
+      { label: 'Purchase Value', weight: 1.5, align: 'right' },
+      { label: 'Consumption (Issue) Value', weight: 1.5, align: 'right' },
+      { label: 'Current Stock Value', weight: 1.5, align: 'right' },
+    ];
+
+    const rows = [];
+    let totalPurchases = 0;
+    let totalIssues = 0;
+    let totalStock = 0;
+
+    for (const branch of branches) {
+      const bid = branch._id;
+      
+      const purchaseData = await Transaction.aggregate([
+        { $match: { type: 'purchase', branchId: bid, ...dateMatch } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      ]);
+      const pVal = purchaseData[0]?.total || 0;
+      
+      const issueData = await Transaction.aggregate([
+        { $match: { type: 'issue', branchId: bid, ...dateMatch } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      ]);
+      const iVal = issueData[0]?.total || 0;
+      
+      const stockData = await Material.aggregate([
+        { $match: { isActive: true, branchId: bid } },
+        { $group: { _id: null, total: { $sum: { $multiply: ['$quantity', '$purchasePrice'] } } } }
+      ]);
+      const sVal = stockData[0]?.total || 0;
+
+      rows.push([
+        branch.branchName,
+        fmtCurrency(pVal),
+        fmtCurrency(iVal),
+        fmtCurrency(sVal)
+      ]);
+      
+      totalPurchases += pVal;
+      totalIssues += iVal;
+      totalStock += sVal;
+    }
+
+    y = drawTable(doc, columns, rows, y);
+    
+    // Custom totals row
+    doc.rect(PAGE.margin, y, PAGE.width - PAGE.margin * 2, 22).fill(COLORS.total);
+    doc.font(FONT.bold).fontSize(9).fillColor(COLORS.white);
+    
+    const tableW = PAGE.width - PAGE.margin * 2;
+    const colWidths = columns.map(c => (c.weight / 6.5) * tableW);
+    let x = PAGE.margin;
+    
+    doc.text('TOTAL', x + 6, y + 6, { width: colWidths[0] - 10 });
+    x += colWidths[0];
+    doc.text(fmtCurrency(totalPurchases), x + 6, y + 6, { width: colWidths[1] - 10, align: 'right' });
+    x += colWidths[1];
+    doc.text(fmtCurrency(totalIssues), x + 6, y + 6, { width: colWidths[2] - 10, align: 'right' });
+    x += colWidths[2];
+    doc.text(fmtCurrency(totalStock), x + 6, y + 6, { width: colWidths[3] - 10, align: 'right' });
+
+    drawFooter(doc, 1, 1);
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 2. Company Purchase Overview
+const generateCompanyPurchaseOverview = async (req, res, next) => {
+  try {
+    const { startDate, endDate, branchId } = req.query;
+    const doc = initCompanyReport(res, 'Company Purchase Overview', 'purchase-overview.pdf');
+
+    let dateMatch = {};
+    if (startDate && endDate) {
+      dateMatch = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate + 'T23:59:59.999Z') } };
+    }
+    
+    let branchMatch = {};
+    if (branchId) branchMatch.branchId = new require('mongoose').Types.ObjectId(branchId);
+
+    // Total Purchases
+    const totalPurchasesAgg = await Transaction.aggregate([
+      { $match: { type: 'purchase', ...dateMatch, ...branchMatch } },
+      { $group: { _id: null, total: { $sum: '$totalPrice' }, count: { $sum: 1 } } }
+    ]);
+    const totalPurchases = totalPurchasesAgg[0]?.total || 0;
+    const totalCount = totalPurchasesAgg[0]?.count || 0;
+
+    // Top Purchasing Branch
+    const topBranchAgg = await Transaction.aggregate([
+      { $match: { type: 'purchase', ...dateMatch, ...branchMatch } },
+      { $group: { _id: '$branchId', total: { $sum: '$totalPrice' } } },
+      { $sort: { total: -1 } },
+      { $limit: 1 },
+      { $lookup: { from: 'branches', localField: '_id', foreignField: '_id', as: 'branch' } },
+      { $unwind: '$branch' }
+    ]);
+    const topBranch = topBranchAgg[0]?.branch.branchName || 'N/A';
+
+    // Most Purchased Material
+    const topMatAgg = await Transaction.aggregate([
+      { $match: { type: 'purchase', ...dateMatch, ...branchMatch } },
+      { $group: { _id: '$material', totalQty: { $sum: '$quantity' } } },
+      { $sort: { totalQty: -1 } },
+      { $limit: 1 },
+      { $lookup: { from: 'materials', localField: '_id', foreignField: '_id', as: 'material' } },
+      { $unwind: '$material' }
+    ]);
+    const topMaterial = topMatAgg[0]?.material.name || 'N/A';
+
+    let y = 140;
+    y = sectionLabel(doc, 'Purchase Summary', y);
+    y = drawInfoGrid(doc, [
+      ['Total Purchase Value', fmtCurrency(totalPurchases)],
+      ['Total Transactions', totalCount.toString()],
+      ['Top Purchasing Branch', topBranch],
+      ['Most Purchased Material (Qty)', topMaterial],
+    ], y);
+    y += 15;
+
+    // Monthly Purchase Trend
+    y = sectionLabel(doc, 'Branch-wise Purchase Contribution', y);
+    y += 5;
+
+    const branchPurchases = await Transaction.aggregate([
+      { $match: { type: 'purchase', ...dateMatch, ...branchMatch } },
+      { $group: { _id: '$branchId', total: { $sum: '$totalPrice' } } },
+      { $sort: { total: -1 } },
+      { $lookup: { from: 'branches', localField: '_id', foreignField: '_id', as: 'branch' } },
+      { $unwind: '$branch' }
+    ]);
+
+    const columns = [
+      { label: 'Branch Name', weight: 2 },
+      { label: 'Purchase Value', weight: 1.5, align: 'right' },
+      { label: 'Contribution %', weight: 1, align: 'right' }
+    ];
+
+    const rows = branchPurchases.map(bp => {
+      const pct = totalPurchases > 0 ? ((bp.total / totalPurchases) * 100).toFixed(1) + '%' : '0%';
+      return [bp.branch.branchName, fmtCurrency(bp.total), pct];
+    });
+
+    if (rows.length === 0) rows.push(['No purchase data found', '', '']);
+    
+    y = drawTable(doc, columns, rows, y);
+
+    drawFooter(doc, 1, 1);
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 3. Material Consumption Report
+const generateCompanyMaterialConsumption = async (req, res, next) => {
+  try {
+    const { startDate, endDate, branchId } = req.query;
+    const doc = initCompanyReport(res, 'Material Consumption Report', 'material-consumption.pdf');
+
+    let dateMatch = {};
+    if (startDate && endDate) {
+      dateMatch = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate + 'T23:59:59.999Z') } };
+    }
+    
+    let branchMatch = {};
+    if (branchId) branchMatch.branchId = new require('mongoose').Types.ObjectId(branchId);
+
+    // Top Consumed Materials (Global)
+    const topMaterials = await Transaction.aggregate([
+      { $match: { type: 'issue', ...dateMatch, ...branchMatch } },
+      { $group: { _id: '$material', totalQty: { $sum: '$quantity' }, totalValue: { $sum: '$totalPrice' } } },
+      { $sort: { totalQty: -1 } },
+      { $limit: 15 },
+      { $lookup: { from: 'materials', localField: '_id', foreignField: '_id', as: 'mat' } },
+      { $unwind: '$mat' }
+    ]);
+
+    let y = 140;
+    y = sectionLabel(doc, 'Top 15 Consumed Materials Across Company', y);
+    y += 5;
+
+    const columns = [
+      { label: 'Material', weight: 2 },
+      { label: 'Category', weight: 1.5 },
+      { label: 'Total Quantity Issued', weight: 1.5, align: 'right' },
+      { label: 'Estimated Value', weight: 1.5, align: 'right' }
+    ];
+
+    const rows = topMaterials.map(tm => [
+      tm.mat.name,
+      tm.mat.category,
+      `${tm.totalQty} ${tm.mat.unit}`,
+      fmtCurrency(tm.totalValue)
+    ]);
+    
+    if (rows.length === 0) rows.push(['No consumption data found', '', '', '']);
+
+    y = drawTable(doc, columns, rows, y);
+
+    drawFooter(doc, 1, 1);
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 4. Branch-wise Stock Summary
+const generateCompanyStockSummary = async (req, res, next) => {
+  try {
+    const doc = initCompanyReport(res, 'Company Stock Summary', 'stock-summary.pdf');
+
+    const branches = await Branch.find({ status: 'active' });
+    
+    let y = 140;
+    y = sectionLabel(doc, 'Branch-wise Stock Distribution', y);
+    y += 5;
+
+    const columns = [
+      { label: 'Branch Name', weight: 2 },
+      { label: 'Total Items (SKUs)', weight: 1.5, align: 'center' },
+      { label: 'Low Stock Items', weight: 1.5, align: 'center' },
+      { label: 'Total Stock Value', weight: 1.5, align: 'right' },
+    ];
+
+    const rows = [];
+    let totalStockVal = 0;
+    let totalLowStock = 0;
+
+    for (const branch of branches) {
+      const bid = branch._id;
+      
+      const totalItemsAgg = await Material.countDocuments({ branchId: bid, isActive: true });
+      const lowStockAgg = await Material.countDocuments({ branchId: bid, isActive: true, $expr: { $lte: ['$quantity', '$minStockLevel'] } });
+      
+      const stockValAgg = await Material.aggregate([
+        { $match: { branchId: bid, isActive: true } },
+        { $group: { _id: null, total: { $sum: { $multiply: ['$quantity', '$purchasePrice'] } } } }
+      ]);
+      const sVal = stockValAgg[0]?.total || 0;
+
+      rows.push([
+        branch.branchName,
+        totalItemsAgg.toString(),
+        lowStockAgg.toString(),
+        fmtCurrency(sVal)
+      ]);
+      
+      totalStockVal += sVal;
+      totalLowStock += lowStockAgg;
+    }
+
+    y = drawTable(doc, columns, rows, y);
+    
+    // Custom totals row
+    doc.rect(PAGE.margin, y, PAGE.width - PAGE.margin * 2, 22).fill(COLORS.total);
+    doc.font(FONT.bold).fontSize(9).fillColor(COLORS.white);
+    
+    const tableW = PAGE.width - PAGE.margin * 2;
+    const colWidths = columns.map(c => (c.weight / 6.5) * tableW);
+    let x = PAGE.margin;
+    
+    doc.text('TOTAL COMPANY STOCK', x + 6, y + 6, { width: colWidths[0] - 10 });
+    x += colWidths[0];
+    doc.text('—', x + 6, y + 6, { width: colWidths[1] - 10, align: 'center' });
+    x += colWidths[1];
+    doc.text(totalLowStock.toString(), x + 6, y + 6, { width: colWidths[2] - 10, align: 'center' });
+    x += colWidths[2];
+    doc.text(fmtCurrency(totalStockVal), x + 6, y + 6, { width: colWidths[3] - 10, align: 'right' });
+
+    drawFooter(doc, 1, 1);
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 5. Executive Summary Report
+const generateCompanyExecutiveSummary = async (req, res, next) => {
+  try {
+    const doc = initCompanyReport(res, 'Company Executive Summary', 'executive-summary.pdf');
+
+    const totalBranches = await Branch.countDocuments();
+    const activeBranches = await Branch.countDocuments({ status: 'active' });
+    
+    const stockValAgg = await Material.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: null, total: { $sum: { $multiply: ['$quantity', '$purchasePrice'] } } } }
+    ]);
+    const totalStockVal = stockValAgg[0]?.total || 0;
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+
+    const thirtyDaysPurchase = await Transaction.aggregate([
+      { $match: { type: 'purchase', createdAt: { $gte: thirtyDaysAgo } } },
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ]);
+    
+    const thirtyDaysIssue = await Transaction.aggregate([
+      { $match: { type: 'issue', createdAt: { $gte: thirtyDaysAgo } } },
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ]);
+
+    let y = 140;
+    y = sectionLabel(doc, 'System Overview', y);
+    y = drawInfoGrid(doc, [
+      ['Total Branches', totalBranches.toString()],
+      ['Active Branches', activeBranches.toString()],
+      ['Total Company Stock Value', fmtCurrency(totalStockVal)],
+      ['Business Movement (Last 30 Days)', fmtCurrency((thirtyDaysPurchase[0]?.total || 0) + (thirtyDaysIssue[0]?.total || 0))],
+    ], y);
+    y += 15;
+
+    // Active branches breakdown
+    y = sectionLabel(doc, 'Active Branches Breakdown', y);
+    y += 5;
+
+    const branches = await Branch.find({ status: 'active' }).populate('managerId', 'name');
+    const columns = [
+      { label: 'Branch Name', weight: 2 },
+      { label: 'Location', weight: 1.5 },
+      { label: 'Manager', weight: 1.5 },
+      { label: 'Created On', weight: 1 }
+    ];
+    
+    const rows = branches.map(b => [
+      b.branchName,
+      b.location,
+      b.managerId?.name || 'Unassigned',
+      fmtDate(b.createdAt)
+    ]);
+    
+    if (rows.length === 0) rows.push(['No branches found', '', '', '']);
+
+    y = drawTable(doc, columns, rows, y);
+
+    drawFooter(doc, 1, 1);
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  generateIssueReport,
+  generatePurchaseReport,
+  generateBulkIssueReport,
+  generateBulkPurchaseReport,
+  generateStockReport,
+  generateSystemSummary,
+  generateCompanyBranchPerformance,
+  generateCompanyPurchaseOverview,
+  generateCompanyMaterialConsumption,
+  generateCompanyStockSummary,
+  generateCompanyExecutiveSummary,
 };
