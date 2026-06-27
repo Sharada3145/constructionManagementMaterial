@@ -12,6 +12,8 @@ import {
   ArrowUpTrayIcon,
   InboxStackIcon,
   UserGroupIcon,
+  DocumentTextIcon,
+  BuildingOffice2Icon,
 } from '@heroicons/react/24/outline';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
@@ -27,6 +29,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { name: 'Suppliers', href: '/suppliers', icon: UsersIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
     { name: 'Analytics', href: '/analytics', icon: ChartBarIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
     { name: 'Contractor Analytics', href: '/contractor-analytics', icon: UserGroupIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
+    // Admin only
+    { name: 'Branch Management', href: '/branches', icon: BuildingOffice2Icon, roles: [ROLES.ADMIN] },
+    // Shared
+    { name: 'Reports', href: '/reports', icon: DocumentTextIcon, roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.CONTRACTOR] },
     // Contractor only
     { name: 'My Issued Materials', href: '/my-issues', icon: InboxStackIcon, roles: [ROLES.CONTRACTOR] },
   ];

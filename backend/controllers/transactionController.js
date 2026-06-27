@@ -1,5 +1,6 @@
 const Transaction = require('../models/Transaction');
 const Material = require('../models/Material');
+const { getBranchFilter } = require('../middleware/auth');
 
 // @desc    Get all transactions (with filters)
 // @route   GET /api/transactions
@@ -8,7 +9,7 @@ const getTransactions = async (req, res, next) => {
   try {
     const { type, material, supplier, startDate, endDate, page = 1, limit = 20, sort = '-createdAt' } = req.query;
 
-    const query = {};
+    const query = { ...getBranchFilter(req) };
 
     // Contractors can only see transactions from their own issued records
     if (req.user.role === 'contractor') {
@@ -36,6 +37,7 @@ const getTransactions = async (req, res, next) => {
       .populate({ path: 'materialRequest', select: 'requestId contractor', populate: { path: 'contractor', select: 'name' } })
       .populate('project', 'name')
       .populate('supplier', 'name')
+      .populate('branchId', 'branchName location')
       .sort(sort)
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
@@ -60,6 +62,10 @@ const createPurchase = async (req, res, next) => {
   try {
     const { material: materialId, quantity, unit, supplier, invoiceNumber, unitPrice, notes } = req.body;
 
+    const branchId = req.user.role === 'admin'
+      ? (req.body.branchId || req.user.branchId?._id || req.user.branchId)
+      : (req.user.branchId?._id || req.user.branchId);
+
     const material = await Material.findById(materialId);
     if (!material) {
       return res.status(404).json({ success: false, message: 'Material not found' });
@@ -82,13 +88,15 @@ const createPurchase = async (req, res, next) => {
       invoiceNumber,
       unitPrice: unitPrice || 0,
       totalPrice: (unitPrice || 0) * quantity,
+      branchId,
       notes,
     });
 
     const populated = await Transaction.findById(transaction._id)
       .populate('material', 'name unit category quantity')
       .populate('performedBy', 'name')
-      .populate('supplier', 'name');
+      .populate('supplier', 'name')
+      .populate('branchId', 'branchName location');
 
     res.status(201).json({
       success: true,
@@ -110,7 +118,8 @@ const getTransaction = async (req, res, next) => {
       .populate('performedBy', 'name email')
       .populate('materialRequest', 'requestId')
       .populate('project', 'name')
-      .populate('supplier', 'name');
+      .populate('supplier', 'name')
+      .populate('branchId', 'branchName location');
 
     if (!transaction) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });

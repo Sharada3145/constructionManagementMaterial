@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Chart as ChartJS,
@@ -8,11 +8,14 @@ import {
 import { Bar, Doughnut } from 'react-chartjs-2';
 import axiosInstance from '../api/axiosInstance';
 import { formatCurrency, formatDate, getStatusColor } from '../utils/constants';
+import { AuthContext } from '../context/AuthContext';
+import { BranchContext } from '../context/BranchContext';
 import {
   CubeIcon, BanknotesIcon, ArrowTrendingUpIcon,
   ExclamationTriangleIcon, DocumentTextIcon, ArrowRightIcon,
-  FireIcon, ClipboardDocumentListIcon,
+  FireIcon, ClipboardDocumentListIcon, BuildingOffice2Icon, UsersIcon,
 } from '@heroicons/react/24/outline';
+import { useParams, useNavigate } from 'react-router-dom';
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, ArcElement,
@@ -72,18 +75,37 @@ const StockBar = ({ quantity, minStockLevel }) => {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = () => {
+  const { user } = useContext(AuthContext);
+  const { activeBranchId, branches, setSelectedBranch } = useContext(BranchContext);
+  const { branchId: routeBranchId } = useParams();
+  const navigate = useNavigate();
+  
   const [data, setData] = useState(null);
   const [monthlyData, setMonthlyData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const isAdmin = user?.role === 'admin';
+
+  // Sync route param with BranchContext
+  useEffect(() => {
+    if (isAdmin && routeBranchId) {
+      const branch = branches.find(b => b._id === routeBranchId);
+      if (branch && activeBranchId !== routeBranchId) {
+        setSelectedBranch(branch);
+      }
+    }
+  }, [routeBranchId, branches, activeBranchId, setSelectedBranch, isAdmin]);
+
   useEffect(() => {
     const fetchAll = async () => {
+      setLoading(true);
       try {
+        const branchParam = activeBranchId ? `?branchId=${activeBranchId}` : '';
         const [dashRes, consumptionRes, catRes] = await Promise.all([
-          axiosInstance.get('/analytics/dashboard'),
-          axiosInstance.get('/analytics/consumption?period=monthly'),
-          axiosInstance.get('/analytics/category-distribution'),
+          axiosInstance.get(`/analytics/dashboard${branchParam}`),
+          axiosInstance.get(`/analytics/consumption?period=monthly${activeBranchId ? `&branchId=${activeBranchId}` : ''}`),
+          axiosInstance.get(`/analytics/category-distribution${branchParam}`),
         ]);
         if (dashRes.data.success) setData(dashRes.data.data);
         if (consumptionRes.data.success) setMonthlyData(consumptionRes.data.data);
@@ -95,7 +117,7 @@ const Dashboard = () => {
       }
     };
     fetchAll();
-  }, []);
+  }, [activeBranchId]);
 
   if (loading) {
     return (
@@ -208,6 +230,34 @@ const Dashboard = () => {
         {stats.map(s => <StatCard key={s.name} {...s} />)}
       </div>
 
+      {/* ── Branch Comparison (Admin) ────────────────────────────────────────────────────── */}
+      {isAdmin && data?.branchPerformance && data.branchPerformance.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+          <SectionHeader title="Branch Comparison" icon={BuildingOffice2Icon} />
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">Branch</th>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">Stock Value</th>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">Purchases</th>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">Issues</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {data.branchPerformance.map((b) => (
+                  <tr key={b.branchName} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-2 font-medium text-slate-900">{b.branchName}</td>
+                    <td className="px-4 py-2">{formatCurrency(b.totalStockValue)}</td>
+                    <td className="px-4 py-2">{formatCurrency(b.totalPurchases)}</td>
+                    <td className="px-4 py-2">{b.totalIssues}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       {/* ── Charts Row ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

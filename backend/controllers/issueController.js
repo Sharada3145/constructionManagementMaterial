@@ -2,6 +2,7 @@ const MaterialRequest = require('../models/MaterialRequest');
 const Material = require('../models/Material');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const { getBranchFilter } = require('../middleware/auth');
 
 // @desc    Manager directly issues materials to a contractor (no approval step)
 // @route   POST /api/requests/issue
@@ -18,17 +19,35 @@ const issueMaterials = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'At least one material item is required' });
     }
 
+    // Determine the branchId for this operation
+    const branchId = req.user.role === 'admin'
+      ? (req.body.branchId || req.user.branchId?._id || req.user.branchId)
+      : (req.user.branchId?._id || req.user.branchId);
+
     // Validate contractor exists and is a contractor role
     const contractor = await User.findById(contractorId);
     if (!contractor || contractor.role !== 'contractor') {
       return res.status(400).json({ success: false, message: 'Invalid contractor selected' });
     }
 
-    // Validate all materials exist and have sufficient stock
+    // Non-admin: ensure contractor belongs to same branch
+    if (req.user.role !== 'admin' && branchId) {
+      const contractorBranch = contractor.branchId?.toString();
+      if (contractorBranch && contractorBranch !== branchId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cannot issue materials to a contractor from a different branch',
+        });
+      }
+    }
+
+    const branchFilter = getBranchFilter(req);
+
+    // Validate all materials exist, belong to branch, and have sufficient stock
     for (const item of items) {
-      const material = await Material.findById(item.material);
+      const material = await Material.findOne({ _id: item.material, ...branchFilter });
       if (!material) {
-        return res.status(400).json({ success: false, message: `Material not found` });
+        return res.status(400).json({ success: false, message: `Material not found in your branch` });
       }
       if (material.quantity < item.requestedQuantity) {
         return res.status(400).json({
@@ -47,6 +66,7 @@ const issueMaterials = async (req, res, next) => {
       status: 'issued',
       reviewedBy: req.user._id,
       reviewedAt: new Date(),
+      branchId,
       items: items.map(item => ({
         material: item.material,
         requestedQuantity: item.requestedQuantity,
@@ -74,6 +94,7 @@ const issueMaterials = async (req, res, next) => {
         materialRequest: issueRecord._id,
         project: project || undefined,
         performedBy: req.user._id,
+        branchId,
         notes: `Issued to ${contractor.name} — ${issueRecord.requestId}`,
       });
     }
@@ -82,7 +103,8 @@ const issueMaterials = async (req, res, next) => {
       .populate('contractor', 'name email phone')
       .populate('items.material', 'name unit category quantity')
       .populate('project', 'name')
-      .populate('reviewedBy', 'name');
+      .populate('reviewedBy', 'name')
+      .populate('branchId', 'branchName location');
 
     res.status(201).json({
       success: true,
@@ -103,7 +125,15 @@ const getUsers = async (req, res, next) => {
     const query = { isActive: true };
     if (role) query.role = role;
 
-    const users = await User.find(query).select('_id name email phone role').sort('name');
+    // Non-admin: only see users from same branch
+    if (req.user.role !== 'admin') {
+      const userBranchId = req.user.branchId?._id || req.user.branchId;
+      if (userBranchId) query.branchId = userBranchId;
+    }
+
+    const users = await User.find(query).select('_id name email phone role branchId')
+      .populate('branchId', 'branchName location')
+      .sort('name');
     res.status(200).json({ success: true, count: users.length, data: users });
   } catch (error) {
     next(error);
@@ -111,4 +141,3 @@ const getUsers = async (req, res, next) => {
 };
 
 module.exports = { issueMaterials, getUsers };
-

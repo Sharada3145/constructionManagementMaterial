@@ -1,4 +1,5 @@
 const Supplier = require('../models/Supplier');
+const { getBranchFilter } = require('../middleware/auth');
 
 // @desc    Get all suppliers
 // @route   GET /api/suppliers
@@ -6,7 +7,8 @@ const Supplier = require('../models/Supplier');
 const getSuppliers = async (req, res, next) => {
   try {
     const { search, page = 1, limit = 20 } = req.query;
-    const query = { isActive: true };
+    const branchFilter = getBranchFilter(req);
+    const query = { isActive: true, ...branchFilter };
 
     if (search) {
       query.$or = [
@@ -17,6 +19,7 @@ const getSuppliers = async (req, res, next) => {
 
     const total = await Supplier.countDocuments(query);
     const suppliers = await Supplier.find(query)
+      .populate('branchId', 'branchName location')
       .sort('-createdAt')
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
@@ -39,7 +42,9 @@ const getSuppliers = async (req, res, next) => {
 // @access  Private
 const getSupplier = async (req, res, next) => {
   try {
-    const supplier = await Supplier.findById(req.params.id);
+    const branchFilter = getBranchFilter(req);
+    const supplier = await Supplier.findOne({ _id: req.params.id, ...branchFilter })
+      .populate('branchId', 'branchName location');
     if (!supplier) {
       return res.status(404).json({ success: false, message: 'Supplier not found' });
     }
@@ -54,7 +59,12 @@ const getSupplier = async (req, res, next) => {
 // @access  Private (admin, manager)
 const createSupplier = async (req, res, next) => {
   try {
-    const supplier = await Supplier.create(req.body);
+    // Inject branchId: managers always get their own branch
+    const branchId = req.user.role === 'admin'
+      ? (req.body.branchId || req.user.branchId?._id || req.user.branchId)
+      : (req.user.branchId?._id || req.user.branchId);
+
+    const supplier = await Supplier.create({ ...req.body, branchId });
     res.status(201).json({ success: true, message: 'Supplier created', data: supplier });
   } catch (error) {
     next(error);
@@ -66,12 +76,14 @@ const createSupplier = async (req, res, next) => {
 // @access  Private (admin, manager)
 const updateSupplier = async (req, res, next) => {
   try {
-    const supplier = await Supplier.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const branchFilter = getBranchFilter(req);
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: req.params.id, ...branchFilter },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!supplier) {
-      return res.status(404).json({ success: false, message: 'Supplier not found' });
+      return res.status(404).json({ success: false, message: 'Supplier not found or not in your branch' });
     }
     res.status(200).json({ success: true, message: 'Supplier updated', data: supplier });
   } catch (error) {
@@ -84,13 +96,14 @@ const updateSupplier = async (req, res, next) => {
 // @access  Private (admin)
 const deleteSupplier = async (req, res, next) => {
   try {
-    const supplier = await Supplier.findByIdAndUpdate(
-      req.params.id,
+    const branchFilter = getBranchFilter(req);
+    const supplier = await Supplier.findOneAndUpdate(
+      { _id: req.params.id, ...branchFilter },
       { isActive: false },
       { new: true }
     );
     if (!supplier) {
-      return res.status(404).json({ success: false, message: 'Supplier not found' });
+      return res.status(404).json({ success: false, message: 'Supplier not found or not in your branch' });
     }
     res.status(200).json({ success: true, message: 'Supplier deleted' });
   } catch (error) {

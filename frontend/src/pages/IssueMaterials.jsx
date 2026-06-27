@@ -10,10 +10,13 @@ import {
   UserIcon,
   CheckCircleIcon,
   UserPlusIcon,
+  DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
+import useReportDownload from '../hooks/useReportDownload';
 
 const IssueMaterials = () => {
   const { user } = useContext(AuthContext);
+  const { downloadIssueReport, isDownloading } = useReportDownload();
   const [contractors, setContractors] = useState([]);
   const [projects, setProjects] = useState([]);
   
@@ -196,12 +199,32 @@ const IssueMaterials = () => {
       {successRecord && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
           <CheckCircleIcon className="w-6 h-6 text-green-600 shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="font-semibold text-green-800">Issue Recorded — {successRecord.requestId}</p>
             <p className="text-sm text-green-700 mt-0.5">
               {successRecord.items?.length} material(s) issued to <strong>{successRecord.contractor?.name}</strong>. Stock updated.
             </p>
-            <button className="text-xs text-green-600 underline mt-1" onClick={() => setSuccessRecord(null)}>Dismiss</button>
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                id="btn-download-issue-report"
+                onClick={() => downloadIssueReport(successRecord._id)}
+                disabled={isDownloading(`issue-${successRecord._id}`)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-green-700 text-white rounded-md hover:bg-green-800 disabled:opacity-60 transition-colors"
+              >
+                {isDownloading(`issue-${successRecord._id}`) ? (
+                  <>
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <DocumentArrowDownIcon className="w-4 h-4" />
+                    Download Issue Report
+                  </>
+                )}
+              </button>
+              <button className="text-xs text-green-600 underline" onClick={() => setSuccessRecord(null)}>Dismiss</button>
+            </div>
           </div>
         </div>
       )}

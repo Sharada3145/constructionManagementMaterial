@@ -1,5 +1,6 @@
 const Material = require('../models/Material');
 const { fuzzyMatchMaterial } = require('../utils/fuzzyMatch');
+const { getBranchFilter } = require('../middleware/auth');
 
 // @desc    Get all materials (with search, filter, pagination)
 // @route   GET /api/materials
@@ -8,7 +9,7 @@ const getMaterials = async (req, res, next) => {
   try {
     const { search, category, lowStock, page = 1, limit = 20, sort = '-updatedAt' } = req.query;
 
-    const query = { isActive: true };
+    const query = { isActive: true, ...getBranchFilter(req) };
 
     if (search) {
       query.$or = [
@@ -28,6 +29,7 @@ const getMaterials = async (req, res, next) => {
     const total = await Material.countDocuments(query);
     const materials = await Material.find(query)
       .populate('supplier', 'name phone')
+      .populate('branchId', 'branchName location')
       .sort(sort)
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
@@ -50,7 +52,10 @@ const getMaterials = async (req, res, next) => {
 // @access  Private
 const getMaterial = async (req, res, next) => {
   try {
-    const material = await Material.findById(req.params.id).populate('supplier', 'name phone email');
+    const branchFilter = getBranchFilter(req);
+    const material = await Material.findOne({ _id: req.params.id, ...branchFilter })
+      .populate('supplier', 'name phone email')
+      .populate('branchId', 'branchName location');
     if (!material) {
       return res.status(404).json({ success: false, message: 'Material not found' });
     }
@@ -65,7 +70,12 @@ const getMaterial = async (req, res, next) => {
 // @access  Private (admin, manager)
 const createMaterial = async (req, res, next) => {
   try {
-    const material = await Material.create(req.body);
+    // Attach branchId: managers get their own branch, admins can pass branchId in body
+    const branchId = req.user.role === 'admin'
+      ? (req.body.branchId || req.user.branchId?._id || req.user.branchId)
+      : (req.user.branchId?._id || req.user.branchId);
+
+    const material = await Material.create({ ...req.body, branchId });
     res.status(201).json({ success: true, message: 'Material created', data: material });
   } catch (error) {
     next(error);
@@ -77,12 +87,14 @@ const createMaterial = async (req, res, next) => {
 // @access  Private (admin, manager)
 const updateMaterial = async (req, res, next) => {
   try {
-    const material = await Material.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const branchFilter = getBranchFilter(req);
+    const material = await Material.findOneAndUpdate(
+      { _id: req.params.id, ...branchFilter },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!material) {
-      return res.status(404).json({ success: false, message: 'Material not found' });
+      return res.status(404).json({ success: false, message: 'Material not found or not in your branch' });
     }
     res.status(200).json({ success: true, message: 'Material updated', data: material });
   } catch (error) {
@@ -92,16 +104,17 @@ const updateMaterial = async (req, res, next) => {
 
 // @desc    Delete (soft-delete) a material
 // @route   DELETE /api/materials/:id
-// @access  Private (admin)
+// @access  Private (admin, manager)
 const deleteMaterial = async (req, res, next) => {
   try {
-    const material = await Material.findByIdAndUpdate(
-      req.params.id,
+    const branchFilter = getBranchFilter(req);
+    const material = await Material.findOneAndUpdate(
+      { _id: req.params.id, ...branchFilter },
       { isActive: false },
       { new: true }
     );
     if (!material) {
-      return res.status(404).json({ success: false, message: 'Material not found' });
+      return res.status(404).json({ success: false, message: 'Material not found or not in your branch' });
     }
     res.status(200).json({ success: true, message: 'Material deleted' });
   } catch (error) {
@@ -114,9 +127,11 @@ const deleteMaterial = async (req, res, next) => {
 // @access  Private
 const getLowStockMaterials = async (req, res, next) => {
   try {
+    const branchFilter = getBranchFilter(req);
     const materials = await Material.find({
       isActive: true,
       $expr: { $lte: ['$quantity', '$minStockLevel'] },
+      ...branchFilter,
     }).populate('supplier', 'name phone');
 
     res.status(200).json({
@@ -134,7 +149,8 @@ const getLowStockMaterials = async (req, res, next) => {
 // @access  Private
 const getCategories = async (req, res, next) => {
   try {
-    const categories = await Material.distinct('category', { isActive: true });
+    const branchFilter = getBranchFilter(req);
+    const categories = await Material.distinct('category', { isActive: true, ...branchFilter });
     res.status(200).json({ success: true, data: categories });
   } catch (error) {
     next(error);
@@ -151,7 +167,8 @@ const fuzzySearch = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Search term is required' });
     }
 
-    const materials = await Material.find({ isActive: true }).select('_id name unit');
+    const branchFilter = getBranchFilter(req);
+    const materials = await Material.find({ isActive: true, ...branchFilter }).select('_id name unit');
     const materialList = materials.map((m) => ({ _id: m._id, name: m.name, unit: m.unit }));
 
     const result = fuzzyMatchMaterial(term, materialList);

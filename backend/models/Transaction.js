@@ -41,6 +41,10 @@ const transactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
     },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+    },
     performedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -87,5 +91,6 @@ transactionSchema.pre('save', async function () {
 transactionSchema.index({ type: 1 });
 transactionSchema.index({ material: 1 });
 transactionSchema.index({ createdAt: -1 });
+transactionSchema.index({ branchId: 1 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

@@ -1,6 +1,7 @@
 const MaterialRequest = require('../models/MaterialRequest');
 const Material = require('../models/Material');
 const Transaction = require('../models/Transaction');
+const { getBranchFilter } = require('../middleware/auth');
 
 // @desc    Create a new material request (contractor)
 // @route   POST /api/requests
@@ -13,19 +14,24 @@ const createRequest = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'At least one item is required' });
     }
 
-    // Validate that all materials exist
+    const branchFilter = getBranchFilter(req);
+
+    // Validate that all materials exist and belong to this branch
     for (const item of items) {
-      const material = await Material.findById(item.material);
+      const material = await Material.findOne({ _id: item.material, ...branchFilter });
       if (!material) {
         return res.status(400).json({
           success: false,
-          message: `Material with ID ${item.material} not found`,
+          message: `Material with ID ${item.material} not found in your branch`,
         });
       }
     }
 
+    const branchId = req.user.branchId?._id || req.user.branchId;
+
     const request = await MaterialRequest.create({
       contractor: req.user._id,
+      branchId,
       items,
       project,
       priority: priority || 'medium',
@@ -35,7 +41,8 @@ const createRequest = async (req, res, next) => {
     const populated = await MaterialRequest.findById(request._id)
       .populate('contractor', 'name email')
       .populate('items.material', 'name unit category')
-      .populate('project', 'name');
+      .populate('project', 'name')
+      .populate('branchId', 'branchName location');
 
     res.status(201).json({
       success: true,
@@ -54,7 +61,7 @@ const getRequests = async (req, res, next) => {
   try {
     const { status, page = 1, limit = 20, sort = '-createdAt' } = req.query;
 
-    const query = {};
+    const query = { ...getBranchFilter(req) };
 
     // Contractors only see their own requests
     if (req.user.role === 'contractor') {
@@ -71,6 +78,7 @@ const getRequests = async (req, res, next) => {
       .populate('items.material', 'name unit category quantity')
       .populate('project', 'name')
       .populate('reviewedBy', 'name')
+      .populate('branchId', 'branchName location')
       .sort(sort)
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
@@ -97,7 +105,8 @@ const getRequest = async (req, res, next) => {
       .populate('contractor', 'name email phone')
       .populate('items.material', 'name unit category quantity')
       .populate('project', 'name')
-      .populate('reviewedBy', 'name');
+      .populate('reviewedBy', 'name')
+      .populate('branchId', 'branchName location');
 
     if (!request) {
       return res.status(404).json({ success: false, message: 'Request not found' });
@@ -106,6 +115,11 @@ const getRequest = async (req, res, next) => {
     // Contractors can only see their own
     if (req.user.role === 'contractor' && request.contractor._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // Non-admin users cannot access other branches
+    if (req.user.role !== 'admin' && request.branchId && request.branchId._id.toString() !== (req.user.branchId?._id || req.user.branchId)?.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this branch' });
     }
 
     res.status(200).json({ success: true, data: request });
@@ -153,6 +167,8 @@ const updateRequestStatus = async (req, res, next) => {
       request.rejectionReason = rejectionReason || 'No reason provided';
     }
 
+    const branchId = request.branchId;
+
     // If approved or issued, create transactions and decrement stock
     if (status === 'approved' || status === 'issued') {
       for (const item of request.items) {
@@ -176,6 +192,7 @@ const updateRequestStatus = async (req, res, next) => {
           materialRequest: request._id,
           project: request.project,
           performedBy: req.user._id,
+          branchId,
           notes: `Issued for request ${request.requestId}`,
         });
       }
@@ -191,7 +208,8 @@ const updateRequestStatus = async (req, res, next) => {
       .populate('contractor', 'name email')
       .populate('items.material', 'name unit category quantity')
       .populate('project', 'name')
-      .populate('reviewedBy', 'name');
+      .populate('reviewedBy', 'name')
+      .populate('branchId', 'branchName location');
 
     res.status(200).json({
       success: true,

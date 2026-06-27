@@ -1,6 +1,9 @@
 const Transaction = require('../models/Transaction');
 const Material = require('../models/Material');
 const MaterialRequest = require('../models/MaterialRequest');
+const Branch = require('../models/Branch');
+const User = require('../models/User');
+const { getBranchFilter } = require('../middleware/auth');
 
 // @desc    Get dashboard overview
 // @route   GET /api/analytics/dashboard
@@ -12,12 +15,14 @@ const getDashboard = async (req, res, next) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    const branchFilter = getBranchFilter(req);
+
     // Total materials
-    const totalMaterials = await Material.countDocuments({ isActive: true });
+    const totalMaterials = await Material.countDocuments({ isActive: true, ...branchFilter });
 
     // Total stock value
     const stockValue = await Material.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, ...branchFilter } },
       { $group: { _id: null, total: { $sum: { $multiply: ['$quantity', '$purchasePrice'] } } } },
     ]);
 
@@ -25,29 +30,32 @@ const getDashboard = async (req, res, next) => {
     const issuedToday = await Transaction.countDocuments({
       type: 'issue',
       createdAt: { $gte: today, $lt: tomorrow },
+      ...branchFilter,
     });
 
     // Pending requests
-    const pendingRequests = await MaterialRequest.countDocuments({ status: 'pending' });
+    const pendingRequests = await MaterialRequest.countDocuments({ status: 'pending', ...branchFilter });
 
     // Low stock items count
     const lowStockItems = await Material.countDocuments({
       isActive: true,
       $expr: { $lte: ['$quantity', '$minStockLevel'] },
+      ...branchFilter,
     });
 
     // Low stock materials list (for the alert panel)
     const lowStockMaterials = await Material.find({
       isActive: true,
       $expr: { $lte: ['$quantity', '$minStockLevel'] },
+      ...branchFilter,
     })
       .select('name category quantity minStockLevel unit')
       .sort('quantity')
       .limit(6);
 
-    // Top materials issued today (aggregated, not raw rows)
+    // Top materials issued today
     const topIssuedToday = await Transaction.aggregate([
-      { $match: { type: 'issue', createdAt: { $gte: today, $lt: tomorrow } } },
+      { $match: { type: 'issue', createdAt: { $gte: today, $lt: tomorrow }, ...branchFilter } },
       { $group: { _id: '$material', totalQty: { $sum: '$quantity' }, unit: { $first: '$unit' } } },
       { $sort: { totalQty: -1 } },
       { $limit: 5 },
@@ -57,11 +65,63 @@ const getDashboard = async (req, res, next) => {
     ]);
 
     // Recent requests (last 5, rich data)
-    const recentRequests = await MaterialRequest.find()
+    const recentRequests = await MaterialRequest.find(branchFilter)
       .populate('contractor', 'name')
       .populate('items.material', 'name unit')
+      .populate('branchId', 'branchName')
       .sort('-createdAt')
       .limit(5);
+
+    // Admin-only: branch comparison data
+    let branchComparison = null;
+    let totalBranches = null;
+    let activeBranches = null;
+    let totalContractors = null;
+
+    if (req.user.role === 'admin') {
+      totalBranches = await Branch.countDocuments();
+      activeBranches = await Branch.countDocuments({ status: 'active' });
+      totalContractors = await User.countDocuments({ role: 'contractor', isActive: true });
+
+      const branches = await Branch.find().populate('managerId', 'name');
+
+      branchComparison = await Promise.all(branches.map(async (branch) => {
+        const bid = branch._id;
+
+        const stockVal = await Material.aggregate([
+          { $match: { isActive: true, branchId: bid } },
+          { $group: { _id: null, total: { $sum: { $multiply: ['$quantity', '$purchasePrice'] } } } },
+        ]);
+
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+
+        const monthlyPurchase = await Transaction.aggregate([
+          { $match: { type: 'purchase', branchId: bid, createdAt: { $gte: monthStart } } },
+          { $group: { _id: null, total: { $sum: '$totalPrice' } } },
+        ]);
+
+        const monthlyIssue = await Transaction.aggregate([
+          { $match: { type: 'issue', branchId: bid, createdAt: { $gte: monthStart } } },
+          { $group: { _id: null, total: { $sum: '$quantity' } } },
+        ]);
+
+        const contractorCount = await User.countDocuments({ branchId: bid, role: 'contractor', isActive: true });
+
+        return {
+          branchId: bid,
+          branchName: branch.branchName,
+          location: branch.location,
+          status: branch.status,
+          manager: branch.managerId?.name || 'Unassigned',
+          stockValue: stockVal[0]?.total || 0,
+          monthlyPurchase: monthlyPurchase[0]?.total || 0,
+          monthlyIssueQty: monthlyIssue[0]?.total || 0,
+          contractorCount,
+        };
+      }));
+    }
 
     res.status(200).json({
       success: true,
@@ -74,6 +134,11 @@ const getDashboard = async (req, res, next) => {
         lowStockMaterials,
         topIssuedToday,
         recentRequests,
+        // Admin-specific
+        totalBranches,
+        activeBranches,
+        totalContractors,
+        branchComparison,
       },
     });
   } catch (error) {
@@ -88,27 +153,29 @@ const getDashboard = async (req, res, next) => {
 const getConsumption = async (req, res, next) => {
   try {
     const { period = 'daily', materialId } = req.query;
+    const branchFilter = getBranchFilter(req);
 
     let startDate = new Date();
     let dateFormat;
 
     switch (period) {
       case 'weekly':
-        startDate.setDate(startDate.getDate() - 7 * 4); // last 4 weeks
+        startDate.setDate(startDate.getDate() - 7 * 4);
         dateFormat = { $dateToString: { format: '%Y-W%V', date: '$createdAt' } };
         break;
       case 'monthly':
-        startDate.setMonth(startDate.getMonth() - 12); // last 12 months
+        startDate.setMonth(startDate.getMonth() - 12);
         dateFormat = { $dateToString: { format: '%Y-%m', date: '$createdAt' } };
         break;
-      default: // daily
-        startDate.setDate(startDate.getDate() - 30); // last 30 days
+      default:
+        startDate.setDate(startDate.getDate() - 30);
         dateFormat = { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } };
     }
 
     const matchStage = {
       type: 'issue',
       createdAt: { $gte: startDate },
+      ...branchFilter,
     };
     if (materialId) matchStage.material = materialId;
 
@@ -137,11 +204,12 @@ const getConsumption = async (req, res, next) => {
 const getTopMaterials = async (req, res, next) => {
   try {
     const { days = 30, limit = 10 } = req.query;
+    const branchFilter = getBranchFilter(req);
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(days));
 
     const topMaterials = await Transaction.aggregate([
-      { $match: { type: 'issue', createdAt: { $gte: startDate } } },
+      { $match: { type: 'issue', createdAt: { $gte: startDate }, ...branchFilter } },
       {
         $group: {
           _id: '$material',
@@ -185,11 +253,12 @@ const getTopMaterials = async (req, res, next) => {
 const getProjectConsumption = async (req, res, next) => {
   try {
     const { days = 30 } = req.query;
+    const branchFilter = getBranchFilter(req);
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(days));
 
     const projectConsumption = await Transaction.aggregate([
-      { $match: { type: 'issue', project: { $ne: null }, createdAt: { $gte: startDate } } },
+      { $match: { type: 'issue', project: { $ne: null }, createdAt: { $gte: startDate }, ...branchFilter } },
       {
         $group: {
           _id: '$project',
@@ -229,8 +298,9 @@ const getProjectConsumption = async (req, res, next) => {
 // @access  Private (admin, manager)
 const getCategoryDistribution = async (req, res, next) => {
   try {
+    const branchFilter = getBranchFilter(req);
     const distribution = await Material.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, ...branchFilter } },
       {
         $group: {
           _id: '$category',
@@ -249,23 +319,20 @@ const getCategoryDistribution = async (req, res, next) => {
 };
 
 // @desc    Get contractor-wise supply summary
-// @route   GET /api/analytics/contractor-supply?period=today|week|month&contractorId=xxx
+// @route   GET /api/analytics/contractor-supply
 // @access  Private (admin, manager)
 const getContractorSupply = async (req, res, next) => {
   try {
-    const { period = 'month', contractorId } = req.query;
+    const { contractorId } = req.query;
+    const branchFilter = getBranchFilter(req);
 
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7);
     const monthStart = new Date(now); monthStart.setDate(now.getDate() - 30);
 
-    // Summary table: one row per contractor
-    // We compute value = quantity × material.purchasePrice to handle legacy
-    // issue transactions that were created without totalPrice.
     const pipeline = [
-      { $match: { type: 'issue', createdAt: { $gte: monthStart } } },
-      // Lookup material to get purchasePrice for value calculation
+      { $match: { type: 'issue', createdAt: { $gte: monthStart }, ...branchFilter } },
       {
         $lookup: {
           from: 'materials',
@@ -285,7 +352,6 @@ const getContractorSupply = async (req, res, next) => {
           },
         },
       },
-      // Lookup materialRequest to get the contractor
       {
         $lookup: {
           from: 'materialrequests',
@@ -295,7 +361,6 @@ const getContractorSupply = async (req, res, next) => {
         },
       },
       { $unwind: '$req' },
-      // Group by contractor
       {
         $group: {
           _id: '$req.contractor',
@@ -310,7 +375,6 @@ const getContractorSupply = async (req, res, next) => {
           txnCount: { $sum: 1 },
         },
       },
-      // Lookup contractor user — drop rows where user was deleted
       {
         $lookup: {
           from: 'users',
@@ -338,15 +402,13 @@ const getContractorSupply = async (req, res, next) => {
 
     const summary = await Transaction.aggregate(pipeline);
 
-    // Detailed breakdown for a specific contractor
     let detail = null;
     if (contractorId) {
       const mongoose = require('mongoose');
       const cid = new mongoose.Types.ObjectId(contractorId);
 
-      // Top materials for this contractor (last 30 days), with value
       const topMaterials = await Transaction.aggregate([
-        { $match: { type: 'issue', createdAt: { $gte: monthStart } } },
+        { $match: { type: 'issue', createdAt: { $gte: monthStart }, ...branchFilter } },
         { $lookup: { from: 'materials', localField: 'material', foreignField: '_id', as: 'mat' } },
         { $unwind: '$mat' },
         {
@@ -383,15 +445,12 @@ const getContractorSupply = async (req, res, next) => {
         },
       ]);
 
-      // Recent requests for this contractor
-      const recentRequests = await require('../models/MaterialRequest')
-        .find({ contractor: cid })
+      const recentRequests = await MaterialRequest.find({ contractor: cid, ...branchFilter })
         .populate('items.material', 'name unit')
         .populate('project', 'name')
         .sort('-createdAt')
         .limit(10);
 
-      const User = require('../models/User');
       const contractorUser = await User.findById(cid).select('name email phone');
 
       detail = { contractor: contractorUser, topMaterials, recentRequests };
@@ -412,4 +471,3 @@ module.exports = {
   getCategoryDistribution,
   getContractorSupply,
 };
-

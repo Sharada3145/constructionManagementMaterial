@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'manager', 'contractor'],
       default: 'contractor',
     },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+    },
     phone: {
       type: String,
       trim: true,

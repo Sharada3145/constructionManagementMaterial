@@ -12,6 +12,9 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const supplierRoutes = require('./routes/supplierRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const branchRoutes = require('./routes/branchRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -37,6 +40,8 @@ app.get('/api/health', (req, res) => {
       suppliers: '/api/suppliers',
       projects: '/api/projects',
       analytics: '/api/analytics',
+      reports: '/api/reports',
+      branches: '/api/branches',
     },
   });
 });
@@ -48,6 +53,9 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/users', userRoutes);
 
 // --------------- Global Error Handler ---------------
 app.use(errorHandler);

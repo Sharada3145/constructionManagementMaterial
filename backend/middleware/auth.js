@@ -18,7 +18,7 @@ const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+    req.user = await User.findById(decoded.id).select('-password').populate('branchId', 'branchName location status');
 
     if (!req.user) {
       return res.status(401).json({
@@ -31,6 +31,14 @@ const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'User account is deactivated',
+      });
+    }
+
+    // Block non-admin users if their branch is deactivated
+    if (req.user.role !== 'admin' && req.user.branchId && req.user.branchId.status === 'deactive') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your branch is currently deactivated. Please contact your administrator.',
       });
     }
 
@@ -56,4 +64,23 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+/**
+ * Helper: returns the branchId filter for a given user.
+ * - Admin:      no filter (or specific branch if ?branchId=xxx passed)
+ * - Manager:    filter by their own branchId
+ * - Contractor: filter by their own branchId
+ */
+const getBranchFilter = (req) => {
+  if (req.user.role === 'admin') {
+    // Admin can filter by a specific branch via query param or header
+    const branchId = req.query.branchId || req.headers['x-branch-id'];
+    if (branchId) {
+      return { branchId };
+    }
+    return {}; // No filter — sees all branches
+  }
+  // Everyone else is scoped to their branch
+  return { branchId: req.user.branchId?._id || req.user.branchId };
+};
+
+module.exports = { protect, authorize, getBranchFilter };

@@ -15,6 +15,10 @@ const materialRequestSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
     },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+    },
     items: [
       {
         material: {
@@ -97,5 +101,6 @@ materialRequestSchema.pre('save', async function () {
 materialRequestSchema.index({ status: 1 });
 materialRequestSchema.index({ contractor: 1 });
 materialRequestSchema.index({ createdAt: -1 });
+materialRequestSchema.index({ branchId: 1 });
 
 module.exports = mongoose.model('MaterialRequest', materialRequestSchema);

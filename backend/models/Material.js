@@ -62,6 +62,10 @@ const materialSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -84,5 +88,6 @@ materialSchema.set('toObject', { virtuals: true });
 // Index for search performance
 materialSchema.index({ name: 'text', category: 'text' });
 materialSchema.index({ category: 1 });
+materialSchema.index({ branchId: 1 });
 
 module.exports = mongoose.model('Material', materialSchema);

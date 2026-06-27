@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider, AuthContext } from './context/AuthContext';
+import { BranchProvider, BranchContext } from './context/BranchContext';
 
 // Layout
 import MainLayout from './components/layout/MainLayout';
@@ -21,6 +22,9 @@ import TransactionHistory from './pages/TransactionHistory';
 import SupplierManagement from './pages/SupplierManagement';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import ContractorAnalytics from './pages/ContractorAnalytics';
+import ReportsCenter from './pages/ReportsCenter';
+import BranchManagement from './pages/BranchManagement';
+import AllBranchesDashboard from './pages/AllBranchesDashboard';
 
 // Route Guard
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -37,6 +41,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+const AdminDashboardRedirect = () => {
+  const { activeBranchId } = useContext(BranchContext);
+  if (activeBranchId) {
+    return <Navigate to={`/admin/branches/${activeBranchId}/dashboard`} replace />;
+  }
+  return <Navigate to="/admin/branches" replace />;
+};
+
 const AppRoutes = () => {
   const { user } = useContext(AuthContext);
 
@@ -50,7 +62,9 @@ const AppRoutes = () => {
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         {/* Default route based on role */}
         <Route index element={
-          user?.role === 'contractor' ? <Navigate to="/my-issues" replace /> : <Dashboard />
+          user?.role === 'contractor' ? <Navigate to="/my-issues" replace /> : 
+          user?.role === 'admin' ? <AdminDashboardRedirect /> :
+          <Dashboard />
         } />
 
         {/* Admin & Manager Routes */}
@@ -62,8 +76,16 @@ const AppRoutes = () => {
         <Route path="analytics" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><AnalyticsDashboard /></ProtectedRoute>} />
         <Route path="contractor-analytics" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><ContractorAnalytics /></ProtectedRoute>} />
 
+        {/* Admin-only Routes */}
+        <Route path="admin/branches" element={<ProtectedRoute allowedRoles={['admin']}><AllBranchesDashboard /></ProtectedRoute>} />
+        <Route path="admin/branches/:branchId/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
+        <Route path="branches" element={<ProtectedRoute allowedRoles={['admin']}><BranchManagement /></ProtectedRoute>} />
+
         {/* Contractor-only Route */}
         <Route path="my-issues" element={<ProtectedRoute allowedRoles={['contractor']}><MyIssuedMaterials /></ProtectedRoute>} />
+
+        {/* Shared Routes */}
+        <Route path="reports" element={<ProtectedRoute allowedRoles={['admin', 'manager', 'contractor']}><ReportsCenter /></ProtectedRoute>} />
       </Route>
 
       <Route path="/unauthorized" element={
@@ -83,8 +105,10 @@ const App = () => {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
-        <ToastContainer position="top-right" autoClose={3000} />
+        <BranchProvider>
+          <AppRoutes />
+          <ToastContainer position="top-right" autoClose={3000} />
+        </BranchProvider>
       </AuthProvider>
     </Router>
   );
