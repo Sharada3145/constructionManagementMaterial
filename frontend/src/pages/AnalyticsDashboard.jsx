@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { formatCurrency } from '../utils/constants';
+import { BranchContext } from '../context/BranchContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,14 +34,15 @@ const AnalyticsDashboard = () => {
   const [topMaterials, setTopMaterials] = useState([]);
   const [categoryDist, setCategoryDist] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { activeBranchId } = useContext(BranchContext);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
         const [consRes, topRes, catRes] = await Promise.all([
-          axiosInstance.get('/analytics/consumption?period=daily'),
-          axiosInstance.get('/analytics/top-materials?days=30&limit=5'),
+          axiosInstance.get('/analytics/consumption?period=all'),
+          axiosInstance.get('/analytics/top-materials?days=all&limit=5'),
           axiosInstance.get('/analytics/category-distribution')
         ]);
         
@@ -54,7 +56,7 @@ const AnalyticsDashboard = () => {
       }
     };
     fetchAnalytics();
-  }, []);
+  }, [activeBranchId]);
 
   if (loading) {
     return <div className="flex h-full items-center justify-center">Loading analytics data...</div>;

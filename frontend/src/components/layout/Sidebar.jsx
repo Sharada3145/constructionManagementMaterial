@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { BranchContext } from '../../context/BranchContext';
 import { ROLES } from '../../utils/constants';
 import {
   HomeIcon,
@@ -18,26 +19,34 @@ import {
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const { user } = useContext(AuthContext);
+  const { activeBranchId } = useContext(BranchContext);
 
   const navigation = [
     // Manager / Admin only
-    { name: 'Dashboard', href: '/', icon: HomeIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
-    { name: 'Inventory', href: '/inventory', icon: CubeIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
-    { name: 'Issue Materials', href: '/issue', icon: ArrowUpTrayIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
-    { name: 'Issue History', href: '/approvals', icon: ClipboardDocumentCheckIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
-    { name: 'Transactions', href: '/transactions', icon: ClockIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
-    { name: 'Suppliers', href: '/suppliers', icon: UsersIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
-    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
-    { name: 'Contractor Analytics', href: '/contractor-analytics', icon: UserGroupIcon, roles: [ROLES.ADMIN, ROLES.MANAGER] },
+    { name: 'Dashboard', href: '/', icon: HomeIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: false },
+    { name: 'Inventory', href: '/inventory', icon: CubeIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Issue Materials', href: '/issue', icon: ArrowUpTrayIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Issue History', href: '/approvals', icon: ClipboardDocumentCheckIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Transactions', href: '/transactions', icon: ClockIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Suppliers', href: '/suppliers', icon: UsersIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Contractor Analytics', href: '/contractor-analytics', icon: UserGroupIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
     // Admin only
-    { name: 'Branch Management', href: '/branches', icon: BuildingOffice2Icon, roles: [ROLES.ADMIN] },
+    { name: 'Branch Management', href: '/branches', icon: BuildingOffice2Icon, roles: [ROLES.ADMIN], requireBranch: false, allBranchesOnly: true },
     // Shared
-    { name: 'Reports', href: '/reports', icon: DocumentTextIcon, roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.CONTRACTOR] },
+    { name: 'Reports', href: '/reports', icon: DocumentTextIcon, roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.CONTRACTOR], requireBranch: false },
     // Contractor only
-    { name: 'My Issued Materials', href: '/my-issues', icon: InboxStackIcon, roles: [ROLES.CONTRACTOR] },
+    { name: 'My Issued Materials', href: '/my-issues', icon: InboxStackIcon, roles: [ROLES.CONTRACTOR], requireBranch: true },
   ];
 
-  const filteredNavigation = navigation.filter((item) => item.roles.includes(user?.role));
+  const filteredNavigation = navigation.filter((item) => {
+    if (!item.roles.includes(user?.role)) return false;
+    // Hide branch-specific pages if admin is viewing "All Branches"
+    if (user?.role === 'admin' && !activeBranchId && item.requireBranch) return false;
+    // Hide all-branches-only pages (like Branch Management) if admin is viewing a specific branch
+    if (user?.role === 'admin' && activeBranchId && item.allBranchesOnly) return false;
+    return true;
+  });
 
   return (
     <>

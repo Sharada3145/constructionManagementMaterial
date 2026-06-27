@@ -10,12 +10,25 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request interceptor to add the auth token
+// Module-level variable to hold the current branch ID
+let currentBranchId = null;
+
+export const setActiveBranchHeader = (branchId) => {
+  currentBranchId = branchId || null;
+};
+
+// Request interceptor to add the auth token AND branch ID
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Always inject the latest branch ID at request time
+    if (currentBranchId) {
+      config.headers['x-branch-id'] = currentBranchId;
+    } else {
+      delete config.headers['x-branch-id'];
     }
     return config;
   },
@@ -41,3 +54,4 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
+

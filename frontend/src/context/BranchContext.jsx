@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import axiosInstance from '../api/axiosInstance';
+import axiosInstance, { setActiveBranchHeader } from '../api/axiosInstance';
 import { AuthContext } from './AuthContext';
 
 export const BranchContext = createContext();
@@ -10,7 +10,12 @@ export const BranchProvider = ({ children }) => {
   const [selectedBranch, setSelectedBranch] = useState(() => {
     try {
       const saved = localStorage.getItem('selectedBranch');
-      return saved ? JSON.parse(saved) : null;
+      const branch = saved ? JSON.parse(saved) : null;
+      // Initialize the header immediately from localStorage so first API call is correct
+      if (branch?._id) {
+        setActiveBranchHeader(branch._id);
+      }
+      return branch;
     } catch {
       return null;
     }
@@ -53,14 +58,10 @@ export const BranchProvider = ({ children }) => {
   const activeBranchId = user?.role === 'admin' ? selectedBranch?._id || null : null;
 
   /**
-   * Automatically attach the selected branch ID to all outgoing API requests.
+   * Automatically sync the selected branch ID for all outgoing API requests.
    */
   useEffect(() => {
-    if (activeBranchId) {
-      axiosInstance.defaults.headers.common['x-branch-id'] = activeBranchId;
-    } else {
-      delete axiosInstance.defaults.headers.common['x-branch-id'];
-    }
+    setActiveBranchHeader(activeBranchId);
   }, [activeBranchId]);
 
   /**

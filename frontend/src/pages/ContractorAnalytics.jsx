@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { formatCurrency, formatDate } from '../utils/constants';
+import { BranchContext } from '../context/BranchContext';
 import {
   UserGroupIcon, ArrowLeftIcon, ChevronUpIcon,
   ChevronDownIcon, MagnifyingGlassIcon, ArrowTrendingUpIcon,
@@ -14,6 +15,7 @@ const PeriodSelector = ({ value, onChange }) => {
     { value: 'today', label: 'Today' },
     { value: 'week', label: 'This Week' },
     { value: 'month', label: 'Last 30 Days' },
+    { value: 'all', label: 'All Time' },
   ];
   return (
     <div className="inline-flex rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -56,24 +58,28 @@ const ContractorAnalytics = () => {
   const [summary, setSummary] = useState([]);
   const [detail, setDetail] = useState(null);
   const [selectedContractor, setSelectedContractor] = useState(null);
-  const [period, setPeriod] = useState('month');
+  const [period, setPeriod] = useState('all');
   const [search, setSearch] = useState('');
   const [sortCol, setSortCol] = useState('totalValue');
   const [sortDir, setSortDir] = useState('desc');
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const { activeBranchId } = useContext(BranchContext);
 
   // ── Fetch summary ──────────────────────────────────────────────────────────
   useEffect(() => {
     fetchSummary();
-  }, [period]);
+  }, [period, activeBranchId]);
 
   const fetchSummary = async () => {
     setLoading(true);
+    setSummary([]);
     try {
       const res = await axiosInstance.get(`/analytics/contractor-supply?period=${period}`);
-      if (res.data.success) setSummary(res.data.data.summary);
-    } catch {
+      console.log('[ContractorAnalytics] API response:', res.data);
+      if (res.data.success) setSummary(res.data.data?.summary || []);
+    } catch (err) {
+      console.error('[ContractorAnalytics] Error:', err.response?.data || err.message);
       toast.error('Failed to load contractor data');
     } finally {
       setLoading(false);

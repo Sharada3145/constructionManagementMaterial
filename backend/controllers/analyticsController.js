@@ -167,6 +167,10 @@ const getConsumption = async (req, res, next) => {
         startDate.setMonth(startDate.getMonth() - 12);
         dateFormat = { $dateToString: { format: '%Y-%m', date: '$createdAt' } };
         break;
+      case 'all':
+        startDate.setFullYear(startDate.getFullYear() - 10);
+        dateFormat = { $dateToString: { format: '%Y-%m', date: '$createdAt' } };
+        break;
       default:
         startDate.setDate(startDate.getDate() - 30);
         dateFormat = { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } };
@@ -203,13 +207,18 @@ const getConsumption = async (req, res, next) => {
 // @access  Private (admin, manager)
 const getTopMaterials = async (req, res, next) => {
   try {
-    const { days = 30, limit = 10 } = req.query;
+    const { days = '30', limit = 10 } = req.query;
     const branchFilter = getBranchFilter(req);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    const matchStage = { type: 'issue', ...branchFilter };
+    if (days !== 'all') {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - parseInt(days));
+      matchStage.createdAt = { $gte: startDate };
+    }
 
     const topMaterials = await Transaction.aggregate([
-      { $match: { type: 'issue', createdAt: { $gte: startDate }, ...branchFilter } },
+      { $match: matchStage },
       {
         $group: {
           _id: '$material',
@@ -252,13 +261,18 @@ const getTopMaterials = async (req, res, next) => {
 // @access  Private (admin, manager)
 const getProjectConsumption = async (req, res, next) => {
   try {
-    const { days = 30 } = req.query;
+    const { days = '30' } = req.query;
     const branchFilter = getBranchFilter(req);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    const matchStage = { type: 'issue', project: { $ne: null }, ...branchFilter };
+    if (days !== 'all') {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - parseInt(days));
+      matchStage.createdAt = { $gte: startDate };
+    }
 
     const projectConsumption = await Transaction.aggregate([
-      { $match: { type: 'issue', project: { $ne: null }, createdAt: { $gte: startDate }, ...branchFilter } },
+      { $match: matchStage },
       {
         $group: {
           _id: '$project',
@@ -323,13 +337,19 @@ const getCategoryDistribution = async (req, res, next) => {
 // @access  Private (admin, manager)
 const getContractorSupply = async (req, res, next) => {
   try {
-    const { contractorId } = req.query;
+    const { contractorId, period = 'month' } = req.query;
     const branchFilter = getBranchFilter(req);
 
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7);
-    const monthStart = new Date(now); monthStart.setDate(now.getDate() - 30);
+    
+    let monthStart = new Date(now); 
+    if (period === 'all') {
+      monthStart.setFullYear(monthStart.getFullYear() - 10);
+    } else {
+      monthStart.setDate(now.getDate() - 30);
+    }
 
     const pipeline = [
       { $match: { type: 'issue', createdAt: { $gte: monthStart }, ...branchFilter } },
