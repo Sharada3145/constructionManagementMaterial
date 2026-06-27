@@ -21,13 +21,13 @@ ChartJS.register(
 
 const StatCard = ({ name, value, icon: Icon, color, bg, sub }) => (
   <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
-    <div className={`p-3 rounded-xl ${bg}`}>
+    <div className={`p-3 rounded-xl shrink-0 ${bg}`}>
       <Icon className={`w-6 h-6 ${color}`} />
     </div>
-    <div>
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{name}</p>
-      <p className="text-2xl font-bold text-slate-900 leading-tight">{value}</p>
-      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+    <div className="min-w-0 flex-1">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">{name}</p>
+      <p className="text-xl font-bold text-slate-900 leading-tight break-words">{value}</p>
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
     </div>
   </div>
 );
@@ -164,6 +164,9 @@ const AllBranchesDashboard = () => {
       borderWidth: 2,
       fill: true,
       tension: 0.4,
+      pointRadius: monthlyData.length === 1 ? 6 : 4,
+      pointBackgroundColor: 'rgba(245,158,11,1)',
+      pointHoverRadius: 8,
     }],
   };
 

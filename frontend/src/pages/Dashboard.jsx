@@ -25,13 +25,13 @@ ChartJS.register(
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({ name, value, icon: Icon, color, bg, sub }) => (
   <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
-    <div className={`p-3 rounded-xl ${bg}`}>
+    <div className={`p-3 rounded-xl shrink-0 ${bg}`}>
       <Icon className={`w-6 h-6 ${color}`} />
     </div>
-    <div>
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{name}</p>
-      <p className="text-2xl font-bold text-slate-900 leading-tight">{value}</p>
-      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+    <div className="min-w-0 flex-1">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">{name}</p>
+      <p className="text-xl font-bold text-slate-900 leading-tight break-words">{value}</p>
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
     </div>
   </div>
 );
@@ -230,34 +230,6 @@ const Dashboard = () => {
         {stats.map(s => <StatCard key={s.name} {...s} />)}
       </div>
 
-      {/* ── Branch Comparison (Admin) ────────────────────────────────────────────────────── */}
-      {isAdmin && data?.branchPerformance && data.branchPerformance.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-          <SectionHeader title="Branch Comparison" icon={BuildingOffice2Icon} />
-          <div className="overflow-x-auto mt-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">Branch</th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">Stock Value</th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">Purchases</th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">Issues</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.branchPerformance.map((b) => (
-                  <tr key={b.branchName} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-2 font-medium text-slate-900">{b.branchName}</td>
-                    <td className="px-4 py-2">{formatCurrency(b.totalStockValue)}</td>
-                    <td className="px-4 py-2">{formatCurrency(b.totalPurchases)}</td>
-                    <td className="px-4 py-2">{b.totalIssues}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
       {/* ── Charts Row ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

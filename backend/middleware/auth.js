@@ -71,16 +71,23 @@ const authorize = (...roles) => {
  * - Contractor: filter by their own branchId
  */
 const getBranchFilter = (req) => {
+  const mongoose = require('mongoose');
+  const toOid = (id) => {
+    try { return new mongoose.Types.ObjectId(id); } catch { return id; }
+  };
+
   if (req.user.role === 'admin') {
     // Admin can filter by a specific branch via query param or header
     const branchId = req.query.branchId || req.headers['x-branch-id'];
     if (branchId) {
-      return { branchId };
+      return { branchId: toOid(branchId) };
     }
     return {}; // No filter — sees all branches
   }
   // Everyone else is scoped to their branch
-  return { branchId: req.user.branchId?._id || req.user.branchId };
+  const branchId = req.user.branchId?._id || req.user.branchId;
+  return { branchId: toOid(branchId) };
 };
+
 
 module.exports = { protect, authorize, getBranchFilter };

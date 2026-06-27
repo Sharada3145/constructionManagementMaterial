@@ -183,9 +183,9 @@ const ContractorAnalytics = () => {
                 { label: 'Last 30 Days', value: selectedContractor.monthQty, sub: 'units issued' },
                 { label: 'Total Value', value: formatCurrency(selectedContractor.totalValue), sub: 'last 30 days', isVal: true },
               ].map(c => (
-                <div key={c.label} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{c.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${c.isVal ? 'text-emerald-600' : 'text-slate-900'}`}>
+                <div key={c.label} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 overflow-hidden">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">{c.label}</p>
+                  <p className={`text-xl font-bold mt-1 break-words ${c.isVal ? 'text-emerald-600' : 'text-slate-900'}`}>
                     {c.isVal ? c.value : c.value?.toLocaleString() ?? 0}
                   </p>
                   <p className="text-[10px] text-slate-400 mt-0.5">{c.sub}</p>
@@ -298,9 +298,9 @@ const ContractorAnalytics = () => {
           { label: 'Total Qty Issued', value: summary.reduce((s, r) => s + r.monthQty, 0).toLocaleString(), sub: 'last 30 days' },
           { label: 'Total Supply Value', value: formatCurrency(summary.reduce((s, r) => s + r.totalValue, 0)), isVal: true },
         ].map(c => (
-          <div key={c.label} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{c.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${c.isVal ? 'text-emerald-600' : 'text-slate-900'}`}>{c.value}</p>
+          <div key={c.label} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 overflow-hidden">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">{c.label}</p>
+            <p className={`text-xl font-bold mt-1 break-words ${c.isVal ? 'text-emerald-600' : 'text-slate-900'}`}>{c.value}</p>
             {c.sub && <p className="text-[10px] text-slate-400 mt-0.5">{c.sub}</p>}
           </div>
         ))}

@@ -187,6 +187,8 @@ const updateRequestStatus = async (req, res, next) => {
           material: material._id,
           quantity: qty,
           unit: item.unit || material.unit,
+          unitPrice: material.purchasePrice || 0,
+          totalPrice: (material.purchasePrice || 0) * qty,
           previousStock,
           newStock: material.quantity,
           materialRequest: request._id,

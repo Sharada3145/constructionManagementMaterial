@@ -138,7 +138,7 @@ const getDashboard = async (req, res, next) => {
         totalBranches,
         activeBranches,
         totalContractors,
-        branchComparison,
+        branchPerformance: branchComparison,
       },
     });
   } catch (error) {
@@ -342,17 +342,23 @@ const getContractorSupply = async (req, res, next) => {
 
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7);
-    
-    let monthStart = new Date(now); 
-    if (period === 'all') {
-      monthStart.setFullYear(monthStart.getFullYear() - 10);
-    } else {
-      monthStart.setDate(now.getDate() - 30);
+    const weekStart  = new Date(now); weekStart.setDate(now.getDate() - 7);
+    const monthStart = new Date(now); monthStart.setDate(now.getDate() - 30);
+
+    // Determine the window for the selected period (used as the primary $match)
+    let periodStart;
+    switch (period) {
+      case 'today': periodStart = todayStart; break;
+      case 'week':  periodStart = weekStart;  break;
+      case 'all':   periodStart = new Date(0); break;  // epoch = all time
+      default:      periodStart = monthStart;           // 'month'
     }
 
     const pipeline = [
-      { $match: { type: 'issue', createdAt: { $gte: monthStart }, ...branchFilter } },
+      // 1. Only issue transactions within the selected period
+      { $match: { type: 'issue', createdAt: { $gte: periodStart }, ...branchFilter } },
+
+      // 2. Join material for price calculation
       {
         $lookup: {
           from: 'materials',
@@ -361,17 +367,9 @@ const getContractorSupply = async (req, res, next) => {
           as: 'mat',
         },
       },
-      { $unwind: '$mat' },
-      {
-        $addFields: {
-          computedValue: {
-            $multiply: [
-              '$quantity',
-              { $ifNull: ['$mat.purchasePrice', 0] },
-            ],
-          },
-        },
-      },
+      { $unwind: { path: '$mat', preserveNullAndEmptyArrays: true } },
+
+      // 3. Join materialRequest to get contractor
       {
         $lookup: {
           from: 'materialrequests',
@@ -380,7 +378,13 @@ const getContractorSupply = async (req, res, next) => {
           as: 'req',
         },
       },
-      { $unwind: '$req' },
+      // Keep transactions even if req is empty (preserveNull) — we'll filter after
+      { $unwind: { path: '$req', preserveNullAndEmptyArrays: true } },
+
+      // 4. Drop transactions with no contractor link
+      { $match: { 'req.contractor': { $exists: true, $ne: null } } },
+
+      // 5. Group by contractor
       {
         $group: {
           _id: '$req.contractor',
@@ -390,11 +394,23 @@ const getContractorSupply = async (req, res, next) => {
           weekQty: {
             $sum: { $cond: [{ $gte: ['$createdAt', weekStart] }, '$quantity', 0] },
           },
-          monthQty: { $sum: '$quantity' },
-          totalValue: { $sum: '$computedValue' },
+          monthQty: {
+            $sum: { $cond: [{ $gte: ['$createdAt', monthStart] }, '$quantity', 0] },
+          },
+          totalValue: {
+            $sum: {
+              $cond: [
+                { $gt: ['$totalPrice', 0] },
+                '$totalPrice',
+                { $multiply: ['$quantity', { $ifNull: ['$mat.purchasePrice', 0] }] },
+              ],
+            },
+          },
           txnCount: { $sum: 1 },
         },
       },
+
+      // 6. Join user info
       {
         $lookup: {
           from: 'users',
@@ -428,24 +444,30 @@ const getContractorSupply = async (req, res, next) => {
       const cid = new mongoose.Types.ObjectId(contractorId);
 
       const topMaterials = await Transaction.aggregate([
-        { $match: { type: 'issue', createdAt: { $gte: monthStart }, ...branchFilter } },
+        { $match: { type: 'issue', createdAt: { $gte: periodStart }, ...branchFilter } },
         { $lookup: { from: 'materials', localField: 'material', foreignField: '_id', as: 'mat' } },
-        { $unwind: '$mat' },
+        { $unwind: { path: '$mat', preserveNullAndEmptyArrays: true } },
         {
           $addFields: {
-            computedValue: { $multiply: ['$quantity', { $ifNull: ['$mat.purchasePrice', 0] }] },
+            computedValue: {
+              $cond: [
+                { $gt: ['$totalPrice', 0] },
+                '$totalPrice',
+                { $multiply: ['$quantity', { $ifNull: ['$mat.purchasePrice', 0] }] },
+              ],
+            },
           },
         },
         { $lookup: { from: 'materialrequests', localField: 'materialRequest', foreignField: '_id', as: 'req' } },
-        { $unwind: '$req' },
+        { $unwind: { path: '$req', preserveNullAndEmptyArrays: true } },
         { $match: { 'req.contractor': cid } },
         {
           $group: {
             _id: '$material',
             unit: { $first: '$unit' },
-            todayQty: { $sum: { $cond: [{ $gte: ['$createdAt', todayStart] }, '$quantity', 0] } },
-            weekQty: { $sum: { $cond: [{ $gte: ['$createdAt', weekStart] }, '$quantity', 0] } },
-            monthQty: { $sum: '$quantity' },
+            todayQty:  { $sum: { $cond: [{ $gte: ['$createdAt', todayStart]  }, '$quantity', 0] } },
+            weekQty:   { $sum: { $cond: [{ $gte: ['$createdAt', weekStart]   }, '$quantity', 0] } },
+            monthQty:  { $sum: { $cond: [{ $gte: ['$createdAt', monthStart]  }, '$quantity', 0] } },
             totalValue: { $sum: '$computedValue' },
           },
         },
@@ -481,6 +503,7 @@ const getContractorSupply = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 module.exports = {
