@@ -81,7 +81,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               onClick={() => setIsOpen(false)}
             >
               <item.icon
-                className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-300 ${isActive ? 'text-primary-400' : 'text-slate-400 group-hover:text-white'}`}
+                className="mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-300 text-slate-400 group-hover:text-white"
                 aria-hidden="true"
               />
               {item.name}
