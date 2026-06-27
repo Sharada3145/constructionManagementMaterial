@@ -47,15 +47,18 @@
   
   /* Glassmorphism Card with 3D Depth */
   .card {
-    @apply bg-white/80 backdrop-blur-md rounded-xl shadow-3d border border-white/50 overflow-hidden transition-all duration-300 ease-out;
+    @apply bg-white/80 backdrop-blur-md rounded-xl border border-white/50 overflow-hidden transition-all duration-300 ease-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   .card:hover {
-    @apply shadow-3d-hover transform -translate-y-1 bg-white/90;
+    @apply transform -translate-y-1 bg-white/90;
+    box-shadow: 0 20px 25px -5px rgba(30, 58, 138, 0.25), 0 10px 10px -5px rgba(30, 58, 138, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   
   /* Pure Glass Panel */
   .glass {
-    @apply bg-white/40 backdrop-blur-lg border border-white/60 shadow-glass rounded-2xl;
+    @apply bg-white/40 backdrop-blur-lg border border-white/60 rounded-2xl;
+    box-shadow: 0 8px 32px 0 rgba(30, 58, 138, 0.15);
   }
   
   .badge {
