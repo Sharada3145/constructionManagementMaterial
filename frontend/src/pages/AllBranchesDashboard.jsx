@@ -20,7 +20,7 @@ ChartJS.register(
 );
 
 const StatCard = ({ name, value, icon: Icon, color, bg, sub }) => (
-  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+  <div className="card group p-5 flex items-center gap-4 animate-fade-in-up">
     <div className={`p-3 rounded-xl shrink-0 ${bg}`}>
       <Icon className={`w-6 h-6 ${color}`} />
     </div>
@@ -129,13 +129,14 @@ const AllBranchesDashboard = () => {
       {
         label: 'Purchase Value',
         data: branchPurchaseData,
-        backgroundColor: 'rgba(79,70,229,0.75)',
+        backgroundColor: 'rgba(147, 51, 234, 0.75)', // purple-600
         borderRadius: 4,
       },
       {
         label: 'Stock Value',
         data: branchStockData,
-        backgroundColor: 'rgba(16,185,129,0.75)',
+        backgroundColor: 'rgba(59, 130, 246, 0.75)', // primary-500
+        borderColor: 'rgba(37, 99, 235, 1)', // primary-600
         borderRadius: 4,
       }
     ],
@@ -159,13 +160,13 @@ const AllBranchesDashboard = () => {
     datasets: [{
       label: 'Materials Issued (Qty)',
       data: monthlyData.map(d => d.totalQuantity),
-      borderColor: 'rgba(245,158,11,1)',
-      backgroundColor: 'rgba(245,158,11,0.1)',
+      borderColor: 'rgba(147, 51, 234, 1)', // purple-600
+      backgroundColor: 'rgba(147, 51, 234, 0.1)',
       borderWidth: 2,
       fill: true,
       tension: 0.4,
       pointRadius: monthlyData.length === 1 ? 6 : 4,
-      pointBackgroundColor: 'rgba(245,158,11,1)',
+      pointBackgroundColor: 'rgba(147, 51, 234, 1)',
       pointHoverRadius: 8,
     }],
   };
@@ -203,7 +204,7 @@ const AllBranchesDashboard = () => {
 
       {/* ── Charts Row 1 ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+        <div className="card">
           <SectionHeader title="Branch Performance Comparison" icon={BuildingOffice2Icon} />
           <div className="p-5" style={{ height: 300 }}>
             {branchPerf.length > 0
@@ -213,7 +214,8 @@ const AllBranchesDashboard = () => {
           </div>
         </div>
         
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+        {/* Branch Comparison */}
+        <div className="card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <SectionHeader title="Monthly Business Growth (Issues)" icon={ArrowTrendingUpIcon} />
           <div className="p-5" style={{ height: 300 }}>
             {monthlyData.length > 0
@@ -225,10 +227,10 @@ const AllBranchesDashboard = () => {
       </div>
 
       {/* ── Branch Data Table ────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <div className="card p-5">
         <SectionHeader title="Top Performing Branches" icon={BuildingOffice2Icon} linkTo="/branches" linkLabel="View all branches" />
         <div className="overflow-x-auto mt-4">
-          <table className="w-full text-sm">
+          <table className="table-modern">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-4 py-3 text-left font-semibold text-slate-600">Branch Name</th>

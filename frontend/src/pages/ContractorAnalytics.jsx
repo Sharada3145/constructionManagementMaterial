@@ -18,7 +18,7 @@ const PeriodSelector = ({ value, onChange }) => {
     { value: 'all', label: 'All Time' },
   ];
   return (
-    <div className="inline-flex rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="inline-flex rounded-lg border border-white/50 bg-white/60 backdrop-blur-sm shadow-sm overflow-hidden">
       {options.map(opt => (
         <button
           key={opt.value}
@@ -183,7 +183,7 @@ const ContractorAnalytics = () => {
                 { label: 'Last 30 Days', value: selectedContractor.monthQty, sub: 'units issued' },
                 { label: 'Total Value', value: formatCurrency(selectedContractor.totalValue), sub: 'last 30 days', isVal: true },
               ].map(c => (
-                <div key={c.label} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 overflow-hidden">
+                <div key={c.label} className="card p-5">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">{c.label}</p>
                   <p className={`text-xl font-bold mt-1 break-words ${c.isVal ? 'text-emerald-600' : 'text-slate-900'}`}>
                     {c.isVal ? c.value : c.value?.toLocaleString() ?? 0}
@@ -195,7 +195,7 @@ const ContractorAnalytics = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top materials */}
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+              <div className="card">
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
                   <ArrowTrendingUpIcon className="w-5 h-5 text-slate-400" />
                   <h2 className="font-bold text-slate-800">Top Materials (Last 30 Days)</h2>
@@ -234,7 +234,7 @@ const ContractorAnalytics = () => {
               </div>
 
               {/* Recent requests */}
-              <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+              <div className="card">
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
                   <CalendarDaysIcon className="w-5 h-5 text-slate-400" />
                   <h2 className="font-bold text-slate-800">Recent Issue Records</h2>
@@ -298,7 +298,7 @@ const ContractorAnalytics = () => {
           { label: 'Total Qty Issued', value: summary.reduce((s, r) => s + r.monthQty, 0).toLocaleString(), sub: 'last 30 days' },
           { label: 'Total Supply Value', value: formatCurrency(summary.reduce((s, r) => s + r.totalValue, 0)), isVal: true },
         ].map(c => (
-          <div key={c.label} className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 overflow-hidden">
+          <div key={c.label} className="card p-5">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">{c.label}</p>
             <p className={`text-xl font-bold mt-1 break-words ${c.isVal ? 'text-emerald-600' : 'text-slate-900'}`}>{c.value}</p>
             {c.sub && <p className="text-[10px] text-slate-400 mt-0.5">{c.sub}</p>}
@@ -307,7 +307,7 @@ const ContractorAnalytics = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+      <div className="card">
         {/* Toolbar */}
         <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <div className="flex items-center gap-2">
@@ -327,7 +327,7 @@ const ContractorAnalytics = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-100">
+          <table className="table-modern">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>

@@ -24,7 +24,7 @@ ChartJS.register(
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({ name, value, icon: Icon, color, bg, sub }) => (
-  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+  <div className="card group p-5 flex items-center gap-4 animate-fade-in-up">
     <div className={`p-3 rounded-xl shrink-0 ${bg}`}>
       <Icon className={`w-6 h-6 ${color}`} />
     </div>
@@ -166,8 +166,8 @@ const Dashboard = () => {
     datasets: [{
       label: 'Materials Issued',
       data: monthlyData.map(d => d.totalQuantity),
-      backgroundColor: 'rgba(79,70,229,0.75)',
-      borderColor: 'rgba(79,70,229,1)',
+      backgroundColor: 'rgba(59, 130, 246, 0.75)', // primary-500
+      borderColor: 'rgba(37, 99, 235, 1)', // primary-600
       borderWidth: 1,
       borderRadius: 6,
     }],
@@ -184,8 +184,8 @@ const Dashboard = () => {
 
   // ── Category Donut Chart ────────────────────────────────────────────────────
   const PALETTE = [
-    '#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444',
-    '#8b5cf6','#ec4899','#14b8a6','#f97316','#64748b',
+    '#3b82f6','#2563eb','#1d4ed8','#1e40af','#1e3a8a',
+    '#60a5fa','#93c5fd','#0ea5e9','#0284c7','#075985',
   ];
   const topCategories = [...categoryData].sort((a, b) => b.totalValue - a.totalValue).slice(0, 8);
   const donutChart = {
@@ -234,7 +234,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Monthly Issue Trend */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+        <div className="lg:col-span-2 card animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <SectionHeader title="Monthly Issue Trend" icon={ArrowTrendingUpIcon} />
           <div className="p-5" style={{ height: 240 }}>
             {monthlyData.length > 0
@@ -245,7 +245,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stock Distribution */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+        <div className="card animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           <SectionHeader title="Stock Distribution" icon={CubeIcon} />
           <div className="p-5" style={{ height: 240 }}>
             {topCategories.length > 0
@@ -260,7 +260,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Recent Requests */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col">
+        <div className="card flex flex-col animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
           <SectionHeader
             title="Recent Requests"
             icon={ClipboardDocumentListIcon}
@@ -312,8 +312,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Today's Issues Summary */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col">
+        {/* Action Center */}
+        <div className="bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg shadow-blue-500/5 rounded-2xl flex flex-col animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
           <SectionHeader
             title="Today's Issues"
             icon={FireIcon}
@@ -367,7 +367,7 @@ const Dashboard = () => {
 
       {/* ── Low Stock Alert Panel ─────────────────────────────────────────────── */}
       {data?.lowStockMaterials?.length > 0 && (
-        <div className="bg-white rounded-xl border border-red-100 shadow-sm">
+        <div className="card border-red-100/50">
           <div className="px-5 py-4 border-b border-red-100 flex items-center justify-between bg-red-50 rounded-t-xl">
             <div className="flex items-center gap-2">
               <ExclamationTriangleIcon className="w-5 h-5 text-red-500" />

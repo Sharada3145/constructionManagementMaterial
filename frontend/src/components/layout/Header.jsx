@@ -22,7 +22,7 @@ const Header = ({ setIsOpen }) => {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-x-4 border-b border-slate-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-8">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-x-4 border-b border-white/30 bg-white/70 backdrop-blur-xl px-4 shadow-sm sm:gap-x-6 sm:px-8">
       <button
         type="button"
         className="-m-2.5 p-2.5 text-slate-700 lg:hidden focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md"
@@ -39,7 +39,7 @@ const Header = ({ setIsOpen }) => {
         {/* Branch Selector — Admin only */}
         {isAdmin && (
           <Menu as="div" className="relative">
-            <Menu.Button className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+            <Menu.Button className="flex items-center gap-2 rounded-lg border border-primary-200/50 bg-primary-50/50 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-primary-800 hover:bg-primary-100/60 transition-all duration-300 shadow-sm hover:shadow">
               <BuildingOffice2Icon className="h-4 w-4 text-primary-600" />
               <span className="max-w-[180px] truncate">
                 {selectedBranch ? selectedBranch.branchName : 'All Branches'}
@@ -55,7 +55,7 @@ const Header = ({ setIsOpen }) => {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute left-0 z-20 mt-2 w-64 origin-top-left rounded-xl bg-white py-1 shadow-xl ring-1 ring-slate-900/10 focus:outline-none">
+              <Menu.Items className="absolute left-0 z-20 mt-2 w-64 origin-top-left rounded-xl bg-white/90 backdrop-blur-xl py-1 shadow-xl ring-1 ring-primary-900/10 focus:outline-none border border-white/50">
                 <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
                   Select Branch
                 </div>
@@ -91,7 +91,7 @@ const Header = ({ setIsOpen }) => {
 
         {/* Manager: show branch name as a badge */}
         {!isAdmin && user?.branchId && (
-          <div className="flex items-center gap-2 rounded-lg bg-primary-50 border border-primary-100 px-3 py-1.5 text-sm text-primary-700">
+          <div className="flex items-center gap-2 rounded-lg bg-primary-50/60 backdrop-blur-sm border border-primary-200/50 px-3 py-1.5 text-sm text-primary-700 shadow-sm">
             <BuildingOffice2Icon className="h-4 w-4" />
             <span className="font-medium">{user.branchId.branchName || 'My Branch'}</span>
           </div>
@@ -99,7 +99,7 @@ const Header = ({ setIsOpen }) => {
 
         <div className="flex items-center gap-x-4 lg:gap-x-6 ml-auto">
           {/* Notification Button */}
-          <button type="button" className="-m-2.5 p-2.5 text-slate-400 hover:text-slate-500">
+          <button type="button" className="-m-2.5 p-2.5 text-slate-400 hover:text-primary-600 transition-colors duration-200 hover:bg-primary-50/50 rounded-lg">
             <span className="sr-only">View notifications</span>
             <BellIcon className="h-6 w-6" aria-hidden="true" />
           </button>
@@ -110,7 +110,7 @@ const Header = ({ setIsOpen }) => {
           <Menu as="div" className="relative">
             <Menu.Button className="-m-1.5 flex items-center p-1.5">
               <span className="sr-only">Open user menu</span>
-              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {user?.name?.charAt(0) || 'U'}
               </div>
               <span className="hidden lg:flex lg:items-center">
@@ -128,7 +128,7 @@ const Header = ({ setIsOpen }) => {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 z-10 mt-2.5 w-48 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-slate-900/5 focus:outline-none">
+              <Menu.Items className="absolute right-0 z-10 mt-2.5 w-48 origin-top-right rounded-xl bg-white/90 backdrop-blur-xl py-2 shadow-xl ring-1 ring-primary-900/10 focus:outline-none border border-white/50">
                 <div className="px-4 py-2 border-b border-slate-100">
                   <p className="text-sm font-medium text-slate-900 truncate">{user?.email}</p>
                   <p className="text-xs text-slate-500 capitalize">{user?.role}</p>

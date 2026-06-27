@@ -217,7 +217,7 @@ const InventoryManagement = () => {
       </div>
 
       <div className="card">
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row gap-4 justify-between bg-white">
+        <div className="p-4 border-b border-slate-100/80 flex flex-col sm:flex-row gap-4 justify-between bg-white/60 backdrop-blur-sm">
           <div className="relative max-w-md w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-slate-400" />
@@ -248,7 +248,7 @@ const InventoryManagement = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
+          <table className="table-modern">
             <thead className="bg-slate-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Material Name</th>
@@ -259,7 +259,7 @@ const InventoryManagement = () => {
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white/40 divide-y divide-slate-100/80">
               {loading ? (
                 <tr><td colSpan="6" className="px-6 py-10 text-center text-slate-500">Loading inventory...</td></tr>
               ) : filteredMaterials.length > 0 ? (
@@ -326,7 +326,7 @@ const InventoryManagement = () => {
       {/* Add / Edit Material Modal */}
       {isAddEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-100 max-w-2xl w-full max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 max-w-2xl w-full max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">
                 {isAddMode ? 'Add New Material' : `Edit Material: ${selectedMaterial?.name}`}
@@ -454,7 +454,7 @@ const InventoryManagement = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3 bg-white">
+              <div className="pt-4 border-t border-slate-100/80 flex items-center justify-end gap-3 bg-white/60 backdrop-blur-sm">
                 <button
                   type="button"
                   onClick={() => setIsAddEditOpen(false)}
@@ -478,7 +478,7 @@ const InventoryManagement = () => {
       {/* Restock Material Modal */}
       {isRestockOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-100 max-w-lg w-full max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 max-w-lg w-full max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Restock Material</h2>
@@ -554,7 +554,7 @@ const InventoryManagement = () => {
                 />
               </div>
 
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3 bg-white">
+              <div className="pt-4 border-t border-slate-100/80 flex items-center justify-end gap-3 bg-white/60 backdrop-blur-sm">
                 <button
                   type="button"
                   onClick={() => setIsRestockOpen(false)}

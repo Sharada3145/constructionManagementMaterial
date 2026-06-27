@@ -198,7 +198,7 @@ const SupplierManagement = () => {
             </div>
           ) : filteredSuppliers.length > 0 ? (
             filteredSuppliers.map((supplier) => (
-              <div key={supplier._id} className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow flex flex-col">
+              <div key={supplier._id} className="card p-5 flex flex-col">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-bold text-slate-900">{supplier.name}</h3>
@@ -269,7 +269,7 @@ const SupplierManagement = () => {
       <Dialog open={isModalOpen} onClose={() => !submitting && setIsModalOpen(false)} className="relative z-50">
         <div className="fixed inset-0 bg-slate-900/50" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden">
+          <Dialog.Panel className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <Dialog.Title className="text-lg font-bold text-slate-900">
                 {isEditMode ? 'Edit Supplier' : 'Add Supplier'}
@@ -396,7 +396,7 @@ const SupplierManagement = () => {
       <Dialog open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} className="relative z-50">
         <div className="fixed inset-0 bg-slate-900/50" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="w-full max-w-4xl bg-white rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <Dialog.Panel className="w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
               <div>
                 <Dialog.Title className="text-lg font-bold text-slate-900">
@@ -417,7 +417,7 @@ const SupplierManagement = () => {
                 </div>
               ) : historyData.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm whitespace-nowrap">
+                  <table className="table-modern">
                     <thead>
                       <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
                         <th className="pb-3 pr-4">Date</th>

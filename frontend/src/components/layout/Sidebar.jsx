@@ -59,8 +59,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex h-16 shrink-0 items-center px-6 bg-slate-950">
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-primary-950 to-primary-900 text-white transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-0 shadow-xl border-r border-white/5 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex h-16 shrink-0 items-center px-6 bg-white/5 backdrop-blur-sm border-b border-white/5">
           <CubeIcon className="h-8 w-8 text-primary-500 mr-2" />
           <span className="text-xl font-bold tracking-tight">CMMS</span>
         </div>
@@ -72,16 +72,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               to={item.href}
               end={item.href === '/'}
               className={({ isActive }) =>
-                `group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                `group flex items-center px-3 py-2.5 text-sm font-medium rounded-r-lg transition-all duration-300 border-l-4 ${
                   isActive
-                    ? 'bg-primary-600 text-white'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-primary-500/10 text-primary-300 border-primary-500 shadow-glow'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white border-transparent hover:border-white/20'
                 }`
               }
               onClick={() => setIsOpen(false)}
             >
               <item.icon
-                className="mr-3 h-5 w-5 flex-shrink-0"
+                className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-300 ${isActive ? 'text-primary-400' : 'text-slate-400 group-hover:text-white'}`}
                 aria-hidden="true"
               />
               {item.name}
@@ -89,7 +89,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           ))}
         </nav>
         
-        <div className="p-4 bg-slate-950 mt-auto">
+        <div className="p-4 bg-white/5 backdrop-blur-sm mt-auto border-t border-white/5">
           <div className="flex items-center text-sm">
             <div className="w-8 h-8 rounded-full bg-primary-700 flex items-center justify-center mr-3 font-bold">
               {user?.name?.charAt(0) || 'U'}

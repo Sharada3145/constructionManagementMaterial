@@ -91,7 +91,7 @@ const ReportCard = ({
   const isLoading = isDownloading(loadingKey);
 
   return (
-    <div className="card overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+    <div className="card overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up">
       {/* Accent top bar */}
       <div className={`h-1.5 ${accentColor}`} />
 
@@ -257,7 +257,7 @@ const ReportsCenter = () => {
               : 'Generate and download PDF reports for your construction operations'}
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm">
+        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-white/50 rounded-lg px-4 py-2 shadow-sm text-sm">
           <span className="text-slate-500">Role:</span>
           <span className="font-semibold text-slate-800 capitalize">{user?.role}</span>
         </div>
@@ -493,7 +493,7 @@ const ReportsCenter = () => {
       {/* PDF Preview Modal */}
       {previewPdf && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-900">Preview Report</h3>

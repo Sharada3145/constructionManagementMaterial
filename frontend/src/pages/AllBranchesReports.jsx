@@ -77,7 +77,7 @@ const ReportCard = ({ title, description, icon: Icon, iconBg, accentColor, child
   const isLoading = isDownloading(loadingKey);
 
   return (
-    <div className="card overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+    <div className="card overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in-up">
       <div className={`h-1.5 ${accentColor}`} />
       <div className="p-6">
         <div className="flex items-start gap-4 mb-5">
@@ -318,7 +318,7 @@ const AllBranchesReports = () => {
       {/* PDF Preview Modal */}
       {previewPdf && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-900">Preview Report</h3>

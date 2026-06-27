@@ -49,7 +49,7 @@ const MyIssuedMaterials = () => {
             Materials issued to you by the stock manager.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm">
+        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-white/50 rounded-lg px-4 py-2 shadow-sm text-sm">
           <span className="text-slate-500">Logged in as:</span>
           <span className="font-semibold text-slate-800">{user?.name}</span>
           <span className="badge bg-primary-100 text-primary-700 capitalize">{user?.role}</span>
@@ -147,7 +147,7 @@ const MyIssuedMaterials = () => {
               {/* Expandable Items Table */}
               {expandedId === record._id && (
                 <div className="border-t border-slate-100">
-                  <table className="min-w-full divide-y divide-slate-100">
+                  <table className="table-modern">
                     <thead className="bg-slate-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">#</th>
@@ -156,7 +156,7 @@ const MyIssuedMaterials = () => {
                         <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Quantity Issued</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-slate-100">
+                    <tbody className="bg-white/40 divide-y divide-slate-100/80">
                       {record.items.map((item, idx) => (
                         <tr key={item._id} className="hover:bg-slate-50">
                           <td className="px-6 py-3 text-sm text-slate-400">{idx + 1}</td>

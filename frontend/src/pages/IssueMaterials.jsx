@@ -236,14 +236,14 @@ const IssueMaterials = () => {
             <div className="bg-slate-100 p-1 rounded-lg flex text-sm">
               <button
                 type="button"
-                className={`px-4 py-1.5 rounded-md font-medium transition-all ${!isNewContractor ? 'bg-white text-primary-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 rounded-md font-medium transition-all ${!isNewContractor ? 'bg-white/80 backdrop-blur-sm text-primary-700 shadow-sm border border-white/50' : 'text-slate-500 hover:text-slate-700'}`}
                 onClick={() => setIsNewContractor(false)}
               >
                 Select Existing
               </button>
               <button
                 type="button"
-                className={`px-4 py-1.5 rounded-md font-medium transition-all flex items-center gap-1 ${isNewContractor ? 'bg-white text-primary-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 rounded-md font-medium transition-all flex items-center gap-1 ${isNewContractor ? 'bg-white/80 backdrop-blur-sm text-primary-700 shadow-sm border border-white/50' : 'text-slate-500 hover:text-slate-700'}`}
                 onClick={() => setIsNewContractor(true)}
               >
                 <UserPlusIcon className="w-4 h-4" /> Create New

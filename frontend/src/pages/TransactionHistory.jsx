@@ -50,7 +50,7 @@ const TransactionHistory = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Transaction History</h1>
         
-        <div className="flex space-x-2 bg-white p-1 rounded-md border border-slate-200">
+        <div className="flex space-x-2 bg-white/60 backdrop-blur-sm p-1 rounded-lg border border-white/50 shadow-sm">
           <button 
             className={`px-3 py-1 text-sm rounded ${filterType === 'all' ? 'bg-slate-200 text-slate-800 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}
             onClick={() => setFilterType('all')}
@@ -74,7 +74,7 @@ const TransactionHistory = () => {
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
+          <table className="table-modern">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date &amp; Time</th>
@@ -85,7 +85,7 @@ const TransactionHistory = () => {
                 <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Receipt</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white/40 divide-y divide-slate-100/80">
               {loading ? (
                 <tr><td colSpan="6" className="px-6 py-10 text-center text-slate-500">Loading transactions...</td></tr>
               ) : transactions.length > 0 ? (
