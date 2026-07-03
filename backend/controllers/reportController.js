@@ -6,6 +6,8 @@ const User = require('../models/User');
 const Branch = require('../models/Branch');
 const { getBranchFilter } = require('../middleware/auth');
 
+const path = require('path');
+
 // ─── Shared PDF helpers ────────────────────────────────────────────────────────
 
 const COLORS = {
@@ -21,13 +23,24 @@ const COLORS = {
   white:       '#FFFFFF',
 };
 
+const FONT_DIR = path.join(__dirname, '../utils/fonts');
+
 const FONT = {
-  regular: 'Helvetica',
-  bold:    'Helvetica-Bold',
+  regular: 'Roboto-Regular',
+  bold:    'Roboto-Bold',
   oblique: 'Helvetica-Oblique',
 };
 
 const PAGE = { width: 595.28, height: 841.89, margin: 45 };
+
+function createDocument(options = {}) {
+  const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin, ...options });
+  // Register Unicode fonts to support the Indian Rupee symbol (₹)
+  doc.registerFont('Roboto-Regular', path.join(FONT_DIR, 'Roboto-Regular.ttf'));
+  doc.registerFont('Roboto-Bold', path.join(FONT_DIR, 'Roboto-Bold.ttf'));
+  return doc;
+}
+
 
 // ── Watermark ──────────────────────────────────────────────────────────────────
 function drawWatermark(doc) {
@@ -242,7 +255,7 @@ const generateIssueReport = async (req, res, next) => {
     }
 
     // ── Build PDF ──────────────────────────────────────────────────────────────
-    const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin, autoFirstPage: true });
+    const doc = createDocument({ autoFirstPage: true });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -347,7 +360,7 @@ const generatePurchaseReport = async (req, res, next) => {
     }
 
     // ── Build PDF ──────────────────────────────────────────────────────────────
-    const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin, autoFirstPage: true });
+    const doc = createDocument({ autoFirstPage: true });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -516,7 +529,7 @@ const generateBulkIssueReport = async (req, res, next) => {
       : 'All Time';
 
     // ── Build PDF ─────────────────────────────────────────────────────────────
-    const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin, autoFirstPage: true });
+    const doc = createDocument({ autoFirstPage: true });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="issue-report-${Date.now()}.pdf"`);
@@ -642,7 +655,7 @@ const generateBulkPurchaseReport = async (req, res, next) => {
       ? `${startDate ? fmtDate(startDate) : 'Start'} — ${endDate ? fmtDate(endDate) : 'Present'}`
       : 'All Time';
 
-    const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin, autoFirstPage: true });
+    const doc = createDocument({ autoFirstPage: true });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="purchase-report-${Date.now()}.pdf"`);
     doc.pipe(res);
@@ -743,7 +756,7 @@ const generateStockReport = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'No materials found' });
     }
 
-    const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin, autoFirstPage: true });
+    const doc = createDocument({ autoFirstPage: true });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="stock-report-${Date.now()}.pdf"`);
     doc.pipe(res);
@@ -876,7 +889,7 @@ const generateSystemSummary = async (req, res, next) => {
       : 'All Time';
 
     // ── Build PDF ─────────────────────────────────────────────────────────────
-    const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin, autoFirstPage: true });
+    const doc = createDocument({ autoFirstPage: true });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="system-summary-${Date.now()}.pdf"`);
     doc.pipe(res);
@@ -985,7 +998,7 @@ module.exports = {
 
 // Helper to init document
 const initCompanyReport = (res, title, filename) => {
-  const doc = new PDFDocument({ size: 'A4', margin: PAGE.margin });
+  const doc = createDocument();
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   doc.pipe(res);
