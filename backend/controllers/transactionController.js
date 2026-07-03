@@ -37,7 +37,9 @@ const getTransactions = async (req, res, next) => {
       .populate({ path: 'materialRequest', select: 'requestId contractor', populate: { path: 'contractor', select: 'name' } })
       .populate('project', 'name')
       .populate('supplier', 'name')
-      .populate('branchId', 'branchName location')
+      .populate('branchId', 'branchName location isCentralWarehouse')
+      .populate('fromBranch', 'branchName location')
+      .populate('toBranch', 'branchName location')
       .sort(sort)
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
@@ -57,14 +59,17 @@ const getTransactions = async (req, res, next) => {
 
 // @desc    Create a purchase transaction (adds stock)
 // @route   POST /api/transactions/purchase
-// @access  Private (admin, manager)
+// @access  Private (admin, central warehouse only)
 const createPurchase = async (req, res, next) => {
   try {
     const { material: materialId, quantity, unit, supplier, invoiceNumber, unitPrice, notes } = req.body;
 
-    const branchId = req.user.role === 'admin'
-      ? (req.body.branchId || req.user.branchId?._id || req.user.branchId)
-      : (req.user.branchId?._id || req.user.branchId);
+    const Branch = require('../models/Branch');
+    const centralWarehouse = await Branch.findOne({ isCentralWarehouse: true });
+    if (!centralWarehouse) {
+      return res.status(400).json({ success: false, message: 'Central Warehouse not configured.' });
+    }
+    const branchId = centralWarehouse._id;
 
     const material = await Material.findById(materialId);
     if (!material) {
@@ -119,7 +124,9 @@ const getTransaction = async (req, res, next) => {
       .populate('materialRequest', 'requestId')
       .populate('project', 'name')
       .populate('supplier', 'name')
-      .populate('branchId', 'branchName location');
+      .populate('branchId', 'branchName location')
+      .populate('fromBranch', 'branchName location')
+      .populate('toBranch', 'branchName location');
 
     if (!transaction) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });

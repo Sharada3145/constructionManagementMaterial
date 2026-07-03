@@ -15,6 +15,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const branchRoutes = require('./routes/branchRoutes');
 const userRoutes = require('./routes/userRoutes');
+const transferRoutes = require('./routes/transferRoutes');
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/transfers', transferRoutes);
 
 // --------------- Global Error Handler ---------------
 app.use(errorHandler);

@@ -22,19 +22,25 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const { activeBranchId } = useContext(BranchContext);
 
   const navigation = [
-    // Manager / Admin only
+    // Manager / Admin only (Branch Context)
     { name: 'Dashboard', href: '/', icon: HomeIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: false },
-    { name: 'Inventory', href: '/inventory', icon: CubeIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Branch Inventory', href: '/inventory', icon: CubeIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
     { name: 'Issue Materials', href: '/issue', icon: ArrowUpTrayIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
     { name: 'Issue History', href: '/approvals', icon: ClipboardDocumentCheckIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
     { name: 'Transactions', href: '/transactions', icon: ClockIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
-    { name: 'Suppliers', href: '/suppliers', icon: UsersIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
-    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
+    { name: 'Branch Analytics', href: '/analytics', icon: ChartBarIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
     { name: 'Contractor Analytics', href: '/contractor-analytics', icon: UserGroupIcon, roles: [ROLES.ADMIN, ROLES.MANAGER], requireBranch: true },
-    // Admin only
+    
+    // Central Warehouse / Admin only (Global Context)
+    { name: 'Warehouse Inventory', href: '/admin/warehouse-inventory', icon: CubeIcon, roles: [ROLES.ADMIN], requireBranch: false, allBranchesOnly: true },
+    { name: 'Material Transfer', href: '/admin/transfer', icon: ArrowUpTrayIcon, roles: [ROLES.ADMIN], requireBranch: false, allBranchesOnly: true },
+    { name: 'Warehouse Analytics', href: '/admin/warehouse-analytics', icon: ChartBarIcon, roles: [ROLES.ADMIN], requireBranch: false, allBranchesOnly: true },
+    { name: 'Suppliers', href: '/suppliers', icon: UsersIcon, roles: [ROLES.ADMIN], requireBranch: false, allBranchesOnly: true },
     { name: 'Branch Management', href: '/branches', icon: BuildingOffice2Icon, roles: [ROLES.ADMIN], requireBranch: false, allBranchesOnly: true },
+    
     // Shared
     { name: 'Reports', href: '/reports', icon: DocumentTextIcon, roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.CONTRACTOR], requireBranch: false },
+    
     // Contractor only
     { name: 'My Issued Materials', href: '/my-issues', icon: InboxStackIcon, roles: [ROLES.CONTRACTOR], requireBranch: true },
   ];

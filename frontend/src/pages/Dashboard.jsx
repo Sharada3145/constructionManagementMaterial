@@ -108,16 +108,24 @@ const Dashboard = () => {
           axiosInstance.get(`/analytics/category-distribution${branchParam}`),
         ]);
         if (dashRes.data.success) setData(dashRes.data.data);
+        else setData({});
         if (consumptionRes.data.success) setMonthlyData(consumptionRes.data.data);
+        else setMonthlyData([]);
         if (catRes.data.success) setCategoryData(catRes.data.data);
+        else setCategoryData([]);
       } catch (err) {
         console.error('Dashboard fetch error:', err);
+        setData({});
+        setMonthlyData([]);
+        setCategoryData([]);
       } finally {
         setLoading(false);
       }
     };
     fetchAll();
   }, [activeBranchId]);
+
+  
 
   if (loading) {
     return (

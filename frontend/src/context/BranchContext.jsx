@@ -11,11 +11,16 @@ export const BranchProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem('selectedBranch');
       const branch = saved ? JSON.parse(saved) : null;
-      // Initialize the header immediately from localStorage so first API call is correct
-      if (branch?._id) {
+      // Only restore if the admin explicitly chose this branch (flagged via 'userChoseBranch')
+      const userChose = localStorage.getItem('userChoseBranch') === 'true';
+      if (branch?._id && userChose) {
         setActiveBranchHeader(branch._id);
+        return branch;
       }
-      return branch;
+      // Otherwise start in "All Branches" mode
+      localStorage.removeItem('selectedBranch');
+      localStorage.removeItem('userChoseBranch');
+      return null;
     } catch {
       return null;
     }
@@ -25,8 +30,11 @@ export const BranchProvider = ({ children }) => {
   useEffect(() => {
     if (selectedBranch) {
       localStorage.setItem('selectedBranch', JSON.stringify(selectedBranch));
+      // Mark that user explicitly chose this branch
+      localStorage.setItem('userChoseBranch', 'true');
     } else {
       localStorage.removeItem('selectedBranch');
+      localStorage.removeItem('userChoseBranch');
     }
   }, [selectedBranch]);
 
@@ -37,6 +45,7 @@ export const BranchProvider = ({ children }) => {
       const res = await axiosInstance.get('/branches');
       if (res.data.success) {
         setBranches(res.data.data);
+        // Do NOT auto-select; let admin stay in "All Branches" mode on first load
       }
     } catch (err) {
       console.error('Failed to fetch branches:', err);

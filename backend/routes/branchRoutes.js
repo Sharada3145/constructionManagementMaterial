@@ -5,6 +5,7 @@ const {
   getBranchById,
   updateBranch,
   toggleBranchStatus,
+  getWarehouse,
 } = require('../controllers/branchController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -17,6 +18,8 @@ router.use(authorize('admin'));
 router.route('/')
   .post(createBranch)
   .get(getBranches);
+
+router.get('/warehouse', getWarehouse);
 
 router.route('/:id')
   .get(getBranchById)

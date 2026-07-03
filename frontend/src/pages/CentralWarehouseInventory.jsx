@@ -21,34 +21,20 @@ const CATEGORIES = [
 
 const UNITS = ['kg', 'bags', 'tonnes', 'pieces', 'meters', 'liters', 'cubic_meters', 'sq_ft', 'bundles'];
 
-const InventoryManagement = () => {
+const CentralWarehouseInventory = () => {
+  const [warehouseId, setWarehouseId] = useState(null);
   const [materials, setMaterials] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // all, low_stock
-  const [isAddMode, setIsAddMode] = useState(true);
+
+  // Modal states
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(true);
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const [centralWarehouseId, setCentralWarehouseId] = useState(null);
-
-  // Fetch Central Warehouse ID on component mount
-  useEffect(() => {
-    const fetchCentralWarehouse = async () => {
-      try {
-        const res = await axiosInstance.get('/branches?isCentralWarehouse=true');
-        if (res.data.success && res.data.data.length > 0) {
-          setCentralWarehouseId(res.data.data[0]._id);
-        }
-      } catch (error) {
-        console.error('Failed to fetch Central Warehouse:', error);
-      }
-    };
-    fetchCentralWarehouse();
-  }, []);
 
   // Form states - Add/Edit
   const [materialForm, setMaterialForm] = useState({
@@ -73,26 +59,42 @@ const InventoryManagement = () => {
   });
 
   useEffect(() => {
-    fetchMaterials();
-    fetchSuppliers();
+    fetchWarehouseAndData();
   }, [filter]);
 
-  const fetchMaterials = async () => {
-    setLoading(true);
+  const fetchWarehouseAndData = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get('/branches/warehouse');
+      if (res.data.success && res.data.data) {
+        setWarehouseId(res.data.data._id);
+        await Promise.all([
+          fetchMaterials(res.data.data._id),
+          fetchSuppliers()
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to load warehouse data", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMaterials = async (wid) => {
     try {
       let url = '/materials';
       if (filter === 'low_stock') {
         url = '/materials/low-stock';
       }
-      const res = await axiosInstance.get(url);
+      const res = await axiosInstance.get(url, {
+        headers: { 'x-branch-id': wid }
+      });
       if (res.data.success) {
         setMaterials(res.data.data);
       }
     } catch (error) {
       console.error("Failed to fetch materials:", error);
       toast.error("Failed to load materials");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -125,6 +127,7 @@ const InventoryManagement = () => {
       purchasePrice: 0,
       description: '',
       location: '',
+      branchId: warehouseId
     });
     setIsAddEditOpen(true);
   };
@@ -143,6 +146,7 @@ const InventoryManagement = () => {
       purchasePrice: material.purchasePrice,
       description: material.description || '',
       location: material.location || '',
+      branchId: warehouseId
     });
     setIsAddEditOpen(true);
   };
@@ -166,16 +170,17 @@ const InventoryManagement = () => {
     setSubmitting(true);
     try {
       let res;
+      const config = { headers: { 'x-branch-id': warehouseId } };
       if (isAddMode) {
-        res = await axiosInstance.post('/materials', materialForm);
+        res = await axiosInstance.post('/materials', { ...materialForm, branchId: warehouseId }, config);
       } else {
-        res = await axiosInstance.put(`/materials/${selectedMaterial._id}`, materialForm);
+        res = await axiosInstance.put(`/materials/${selectedMaterial._id}`, materialForm, config);
       }
 
       if (res.data.success) {
         toast.success(isAddMode ? 'Material created successfully' : 'Material updated successfully');
         setIsAddEditOpen(false);
-        fetchMaterials();
+        fetchMaterials(warehouseId);
       }
     } catch (error) {
       console.error("Material save failed:", error);
@@ -186,59 +191,45 @@ const InventoryManagement = () => {
   };
 
   // Handle Restock Form Submission
-    const handleRestockSubmit = async (e) => {
-      e.preventDefault();
-      if (!restockForm.quantity || Number(restockForm.quantity) <= 0) {
-        toast.error('Please enter a valid restock quantity');
-        return;
-      }
-      if (!centralWarehouseId) {
-        toast.error('Central Warehouse not identified');
-        return;
-      }
-      setSubmitting(true);
-      try {
-        const payload = {
-          quantity: Number(restockForm.quantity),
-          invoiceNumber: restockForm.invoiceNumber || undefined,
-          unitPrice: restockForm.unitPrice ? Number(restockForm.unitPrice) : undefined,
-          supplier: restockForm.supplier || undefined,
-          notes: restockForm.notes || undefined,
-        };
-        const res = await axiosInstance.post(`/materials/${selectedMaterial._id}/restock`, payload);
-        if (res.data.success) {
-          toast.success(res.data.message || 'Material restocked successfully');
-          setIsRestockOpen(false);
-          fetchMaterials();
-        }
-      } catch (error) {
-        console.error('Restock failed:', error);
-        const msg = error.response?.data?.message || 'Failed to restock material';
-        toast.error(msg);
-      } finally {
-        setSubmitting(false);
-      }
-    };
-
-  // Delete material
-  const handleDelete = async (materialId) => {
+  const handleRestockSubmit = async (e) => {
+    e.preventDefault();
+    if (!restockForm.quantity || Number(restockForm.quantity) <= 0) {
+      toast.error('Please enter a valid restock quantity');
+      return;
+    }
+    setSubmitting(true);
     try {
-      const res = await axiosInstance.delete(`/materials/${materialId}`);
+      const payload = {
+        material: selectedMaterial._id,
+        quantity: Number(restockForm.quantity),
+        unit: selectedMaterial.unit,
+        supplier: restockForm.supplier || null,
+        invoiceNumber: restockForm.invoiceNumber,
+        unitPrice: restockForm.unitPrice ? Number(restockForm.unitPrice) : undefined,
+        notes: restockForm.notes,
+      };
+
+      const res = await axiosInstance.post('/transactions/purchase', payload);
       if (res.data.success) {
-        toast.success('Material deleted successfully');
-        fetchMaterials();
+        toast.success('Restock purchase recorded and stock updated in Central Warehouse');
+        setIsRestockOpen(false);
+        fetchMaterials(warehouseId);
       }
     } catch (error) {
-      console.error('Delete failed:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete material');
+      console.error("Restock failed:", error);
+      toast.error(error.response?.data?.message || 'Failed to restock material');
+    } finally {
+      setSubmitting(false);
     }
   };
-
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Inventory Management</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Central Warehouse Inventory</h1>
+          <p className="text-sm text-slate-500">Manage global materials and purchases</p>
+        </div>
         <button 
           onClick={openAddModal}
           className="btn-primary flex items-center justify-center"
@@ -257,7 +248,7 @@ const InventoryManagement = () => {
             <input
               type="text"
               className="input-field pl-10"
-              placeholder="Search materials..."
+              placeholder="Search warehouse materials..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -286,7 +277,7 @@ const InventoryManagement = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Material Name</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stock Level</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Price (Unit)</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Current Value</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Supplier</th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -319,10 +310,11 @@ const InventoryManagement = () => {
                           <ExclamationCircleIcon className="h-5 w-5 text-red-500 ml-2" title="Low Stock!" />
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">Min: {material.minStockLevel}</div>
+                      <div className="text-xs text-slate-500">Min: {material.minStockLevel} | Req: {Math.max(0, material.minStockLevel - material.quantity)}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {formatCurrency(material.purchasePrice)}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-slate-900 font-medium">{formatCurrency(material.quantity * (material.purchasePrice || 0))}</div>
+                      <div className="text-xs text-slate-500">{formatCurrency(material.purchasePrice || 0)} per unit</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                       {material.supplier?.name || 'Unknown'}
@@ -346,7 +338,7 @@ const InventoryManagement = () => {
               ) : (
                 <tr>
                   <td colSpan="6" className="px-6 py-10 text-center text-slate-500">
-                    No materials found matching your criteria.
+                    No materials found in Central Warehouse.
                   </td>
                 </tr>
               )}
@@ -610,5 +602,4 @@ const InventoryManagement = () => {
   );
 };
 
-export default InventoryManagement;
-
+export default CentralWarehouseInventory;

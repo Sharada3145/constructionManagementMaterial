@@ -13,8 +13,8 @@ router.use(protect);
 
 router.get('/', getSuppliers);
 router.get('/:id', getSupplier);
-router.post('/', authorize('admin', 'manager'), createSupplier);
-router.put('/:id', authorize('admin', 'manager'), updateSupplier);
+router.post('/', authorize('admin'), createSupplier);
+router.put('/:id', authorize('admin'), updateSupplier);
 router.delete('/:id', authorize('admin'), deleteSupplier);
 
 module.exports = router;

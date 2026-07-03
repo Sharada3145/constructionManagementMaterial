@@ -24,11 +24,11 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // Always inject the latest branch ID at request time
-    if (currentBranchId) {
-      config.headers['x-branch-id'] = currentBranchId;
-    } else {
-      delete config.headers['x-branch-id'];
+    // Inject the latest branch ID at request time if not already explicitly provided
+    if (config.headers['x-branch-id'] === undefined) {
+      if (currentBranchId) {
+        config.headers['x-branch-id'] = currentBranchId;
+      }
     }
     return config;
   },

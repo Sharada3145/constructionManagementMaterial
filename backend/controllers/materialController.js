@@ -1,4 +1,5 @@
 const Material = require('../models/Material');
+const Transaction = require('../models/Transaction');
 const { fuzzyMatchMaterial } = require('../utils/fuzzyMatch');
 const { getBranchFilter } = require('../middleware/auth');
 
@@ -71,9 +72,25 @@ const getMaterial = async (req, res, next) => {
 const createMaterial = async (req, res, next) => {
   try {
     // Attach branchId: managers get their own branch, admins can pass branchId in body
-    const branchId = req.user.role === 'admin'
+    let branchId = req.user.role === 'admin'
       ? (req.body.branchId || req.user.branchId?._id || req.user.branchId)
       : (req.user.branchId?._id || req.user.branchId);
+
+    branchId = branchId || null;
+
+    // Check if material with same name already exists in the same location
+    const existingMaterial = await Material.findOne({
+      name: { $regex: new RegExp(`^${(req.body.name || '').trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') },
+      branchId: branchId,
+      isActive: true,
+    });
+
+    if (existingMaterial) {
+      return res.status(400).json({
+        success: false,
+        message: `Material '${req.body.name}' already exists.`,
+      });
+    }
 
     const material = await Material.create({ ...req.body, branchId });
     res.status(201).json({ success: true, message: 'Material created', data: material });
@@ -88,6 +105,24 @@ const createMaterial = async (req, res, next) => {
 const updateMaterial = async (req, res, next) => {
   try {
     const branchFilter = getBranchFilter(req);
+
+    // If updating name, check for duplicates
+    if (req.body.name) {
+      const existingMaterial = await Material.findOne({
+        _id: { $ne: req.params.id },
+        name: { $regex: new RegExp(`^${req.body.name.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') },
+        ...branchFilter,
+        isActive: true,
+      });
+
+      if (existingMaterial) {
+        return res.status(400).json({
+          success: false,
+          message: `Material '${req.body.name}' already exists.`,
+        });
+      }
+    }
+
     const material = await Material.findOneAndUpdate(
       { _id: req.params.id, ...branchFilter },
       req.body,
@@ -182,6 +217,66 @@ const fuzzySearch = async (req, res, next) => {
   }
 };
 
+// @desc    Restock a material (purchase / incoming stock)
+// @route   POST /api/materials/:id/restock
+// @access  Private (admin, manager)
+const restockMaterial = async (req, res, next) => {
+  try {
+    const { quantity, invoiceNumber, unitPrice, supplier, notes } = req.body;
+
+    if (!quantity || Number(quantity) <= 0) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid restock quantity' });
+    }
+
+    const branchFilter = getBranchFilter(req);
+    const material = await Material.findOne({ _id: req.params.id, isActive: true, ...branchFilter });
+    if (!material) {
+      return res.status(404).json({ success: false, message: 'Material not found or not in your branch' });
+    }
+
+    const prevQty = material.quantity;
+    const addQty = Number(quantity);
+    material.quantity = prevQty + addQty;
+
+    // Update purchase price if supplied
+    if (unitPrice && Number(unitPrice) > 0) {
+      material.purchasePrice = Number(unitPrice);
+    }
+    if (supplier) {
+      material.supplier = supplier;
+    }
+
+    await material.save();
+
+    // Log a purchase transaction
+    await Transaction.create({
+      type: 'purchase',
+      material: material._id,
+      quantity: addQty,
+      unit: material.unit,
+      previousStock: prevQty,
+      newStock: material.quantity,
+      branchId: material.branchId,
+      performedBy: req.user._id,
+      supplier: supplier || material.supplier || undefined,
+      invoiceNumber: invoiceNumber || undefined,
+      unitPrice: unitPrice ? Number(unitPrice) : material.purchasePrice,
+      totalPrice: (unitPrice ? Number(unitPrice) : material.purchasePrice || 0) * addQty,
+      notes: notes || `Restocked ${addQty} ${material.unit} of ${material.name}`,
+    });
+
+    const updated = await Material.findById(material._id).populate('supplier', 'name phone').populate('branchId', 'branchName');
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully restocked ${addQty} ${material.unit} of ${material.name}`,
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getMaterials,
   getMaterial,
@@ -191,4 +286,5 @@ module.exports = {
   getLowStockMaterials,
   getCategories,
   fuzzySearch,
+  restockMaterial,
 };

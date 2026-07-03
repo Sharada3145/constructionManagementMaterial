@@ -7,6 +7,7 @@ const {
   getProjectConsumption,
   getCategoryDistribution,
   getContractorSupply,
+  getWarehouseAnalytics,
 } = require('../controllers/analyticsController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -19,5 +20,6 @@ router.get('/top-materials', getTopMaterials);
 router.get('/project-consumption', getProjectConsumption);
 router.get('/category-distribution', getCategoryDistribution);
 router.get('/contractor-supply', getContractorSupply);
+router.get('/warehouse', authorize('admin'), getWarehouseAnalytics);
 
 module.exports = router;

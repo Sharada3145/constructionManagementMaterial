@@ -22,14 +22,18 @@ const branchSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    managerId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+    managerName: {
+      type: String,
+      trim: true,
     },
     status: {
       type: String,
       enum: ['active', 'deactive'],
       default: 'active',
+    },
+    isCentralWarehouse: {
+      type: Boolean,
+      default: false,
     },
   },
   {

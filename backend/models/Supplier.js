@@ -42,10 +42,6 @@ const supplierSchema = new mongoose.Schema(
       max: 5,
       default: 3,
     },
-    branchId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Branch',
-    },
     isActive: {
       type: Boolean,
       default: true,
@@ -57,6 +53,5 @@ const supplierSchema = new mongoose.Schema(
 );
 
 supplierSchema.index({ name: 'text' });
-supplierSchema.index({ branchId: 1 });
 
 module.exports = mongoose.model('Supplier', supplierSchema);

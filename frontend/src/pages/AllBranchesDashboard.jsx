@@ -12,6 +12,7 @@ import { AuthContext } from '../context/AuthContext';
 import {
   BuildingOffice2Icon, BanknotesIcon, CubeIcon,
   ArrowTrendingUpIcon, UsersIcon, ArrowRightIcon,
+  ArchiveBoxIcon, ChartBarIcon, ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 ChartJS.register(
@@ -194,6 +195,37 @@ const AllBranchesDashboard = () => {
         >
           <BuildingOffice2Icon className="w-4 h-4" />
           Manage Branches
+        </Link>
+      </div>
+
+      {/* ── Central Warehouse Quick Actions ──────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Link to="/admin/warehouse-inventory" className="card p-5 flex items-center gap-4 hover:shadow-lg transition-shadow border border-primary-100 bg-primary-50/30">
+          <div className="p-3 bg-primary-100 rounded-xl text-primary-700">
+            <ArchiveBoxIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900">Central Inventory</h3>
+            <p className="text-xs text-slate-500">Manage global materials & purchases</p>
+          </div>
+        </Link>
+        <Link to="/admin/transfer" className="card p-5 flex items-center gap-4 hover:shadow-lg transition-shadow border border-emerald-100 bg-emerald-50/30">
+          <div className="p-3 bg-emerald-100 rounded-xl text-emerald-700">
+            <ArrowPathIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900">Material Transfer</h3>
+            <p className="text-xs text-slate-500">Distribute stock to branches</p>
+          </div>
+        </Link>
+        <Link to="/admin/warehouse-analytics" className="card p-5 flex items-center gap-4 hover:shadow-lg transition-shadow border border-purple-100 bg-purple-50/30">
+          <div className="p-3 bg-purple-100 rounded-xl text-purple-700">
+            <ChartBarIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900">Global Analytics</h3>
+            <p className="text-xs text-slate-500">View consumption & predictions</p>
+          </div>
         </Link>
       </div>
 

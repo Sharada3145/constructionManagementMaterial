@@ -21,7 +21,7 @@ const issueMaterials = async (req, res, next) => {
 
     // Determine the branchId for this operation
     const branchId = req.user.role === 'admin'
-      ? (req.body.branchId || req.user.branchId?._id || req.user.branchId)
+      ? (req.body.branchId || req.headers['x-branch-id'] || req.user.branchId?._id || req.user.branchId)
       : (req.user.branchId?._id || req.user.branchId);
 
     // Validate contractor exists and is a contractor role

@@ -8,7 +8,7 @@ const transactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['issue', 'purchase', 'return', 'adjustment'],
+      enum: ['issue', 'purchase', 'return', 'adjustment', 'transfer'],
       required: [true, 'Transaction type is required'],
     },
     material: {
@@ -42,6 +42,14 @@ const transactionSchema = new mongoose.Schema(
       ref: 'Project',
     },
     branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+    },
+    fromBranch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+    },
+    toBranch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Branch',
     },
@@ -83,7 +91,7 @@ const transactionSchema = new mongoose.Schema(
 transactionSchema.pre('save', async function () {
   if (!this.transactionId) {
     const count = await mongoose.model('Transaction').countDocuments();
-    const prefix = this.type === 'issue' ? 'ISS' : this.type === 'purchase' ? 'PUR' : 'TXN';
+    const prefix = this.type === 'issue' ? 'ISS' : this.type === 'purchase' ? 'PUR' : this.type === 'transfer' ? 'TRF' : 'TXN';
     this.transactionId = `${prefix}-${String(count + 1).padStart(6, '0')}`;
   }
 });

@@ -11,6 +11,6 @@ router.use(protect);
 
 router.get('/', getTransactions);
 router.get('/:id', getTransaction);
-router.post('/purchase', authorize('admin', 'manager'), createPurchase);
+router.post('/purchase', authorize('admin'), createPurchase);
 
 module.exports = router;

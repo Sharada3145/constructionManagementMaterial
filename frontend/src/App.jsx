@@ -25,6 +25,9 @@ import ContractorAnalytics from './pages/ContractorAnalytics';
 import ReportsPage from './pages/ReportsPage';
 import BranchManagement from './pages/BranchManagement';
 import AllBranchesDashboard from './pages/AllBranchesDashboard';
+import CentralWarehouseInventory from './pages/CentralWarehouseInventory';
+import WarehouseAnalytics from './pages/WarehouseAnalytics';
+import MaterialTransfer from './pages/MaterialTransfer';
 
 // Route Guard
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -72,13 +75,16 @@ const AppRoutes = () => {
         <Route path="issue" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><IssueMaterials /></ProtectedRoute>} />
         <Route path="approvals" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><RequestApproval /></ProtectedRoute>} />
         <Route path="transactions" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><TransactionHistory /></ProtectedRoute>} />
-        <Route path="suppliers" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><SupplierManagement /></ProtectedRoute>} />
         <Route path="analytics" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><AnalyticsDashboard /></ProtectedRoute>} />
         <Route path="contractor-analytics" element={<ProtectedRoute allowedRoles={['admin', 'manager']}><ContractorAnalytics /></ProtectedRoute>} />
 
         {/* Admin-only Routes */}
         <Route path="admin/branches" element={<ProtectedRoute allowedRoles={['admin']}><AllBranchesDashboard /></ProtectedRoute>} />
         <Route path="admin/branches/:branchId/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
+        <Route path="admin/warehouse-inventory" element={<ProtectedRoute allowedRoles={['admin']}><CentralWarehouseInventory /></ProtectedRoute>} />
+        <Route path="admin/warehouse-analytics" element={<ProtectedRoute allowedRoles={['admin']}><WarehouseAnalytics /></ProtectedRoute>} />
+        <Route path="admin/transfer" element={<ProtectedRoute allowedRoles={['admin']}><MaterialTransfer /></ProtectedRoute>} />
+        <Route path="suppliers" element={<ProtectedRoute allowedRoles={['admin']}><SupplierManagement /></ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute allowedRoles={['admin']}><BranchManagement /></ProtectedRoute>} />
 
         {/* Contractor-only Route */}

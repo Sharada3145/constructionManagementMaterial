@@ -17,8 +17,8 @@ const createBranch = async (req, res, next) => {
 // @access Private/Admin
 const getBranches = async (req, res, next) => {
   try {
-    const branches = await Branch.find().populate('managerId', 'name email');
-    res.status(200).json({ success: true, count: branches.length, data: branches });
+    const branches = await Branch.find();
+  res.status(200).json({ success: true, count: branches.length, data: branches });
   } catch (err) {
     next(err);
   }
@@ -77,10 +77,26 @@ const toggleBranchStatus = async (req, res, next) => {
   }
 };
 
+// @desc  Get Central Warehouse
+// @route GET /api/branches/warehouse
+// @access Private/Admin
+const getWarehouse = async (req, res, next) => {
+  try {
+    const warehouse = await Branch.findOne({ isCentralWarehouse: true });
+    if (!warehouse) {
+      return res.status(404).json({ success: false, message: 'Central Warehouse not found' });
+    }
+    res.status(200).json({ success: true, data: warehouse });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createBranch,
   getBranches,
   getBranchById,
   updateBranch,
   toggleBranchStatus,
+  getWarehouse,
 };

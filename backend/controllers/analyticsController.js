@@ -83,7 +83,7 @@ const getDashboard = async (req, res, next) => {
       activeBranches = await Branch.countDocuments({ status: 'active' });
       totalContractors = await User.countDocuments({ role: 'contractor', isActive: true });
 
-      const branches = await Branch.find().populate('managerId', 'name');
+      const branches = await Branch.find();
 
       branchComparison = await Promise.all(branches.map(async (branch) => {
         const bid = branch._id;
@@ -114,7 +114,7 @@ const getDashboard = async (req, res, next) => {
           branchName: branch.branchName,
           location: branch.location,
           status: branch.status,
-          manager: branch.managerId?.name || 'Unassigned',
+          manager: branch.managerName || 'Unassigned',
           stockValue: stockVal[0]?.total || 0,
           monthlyPurchase: monthlyPurchase[0]?.total || 0,
           monthlyIssueQty: monthlyIssue[0]?.total || 0,
@@ -505,6 +505,146 @@ const getContractorSupply = async (req, res, next) => {
 };
 
 
+// @desc    Get Warehouse Analytics
+// @route   GET /api/analytics/warehouse
+// @access  Private (admin)
+const getWarehouseAnalytics = async (req, res, next) => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // 1. Material usage across branches
+    const usageData = await Transaction.aggregate([
+      { $match: { type: 'issue', createdAt: { $gte: thirtyDaysAgo } } },
+      {
+        $group: {
+          _id: { material: '$material', branchId: '$branchId' },
+          totalQuantity: { $sum: '$quantity' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'materials',
+          localField: '_id.material',
+          foreignField: '_id',
+          as: 'materialInfo'
+        }
+      },
+      {
+        $lookup: {
+          from: 'branches',
+          localField: '_id.branchId',
+          foreignField: '_id',
+          as: 'branchInfo'
+        }
+      },
+      { $unwind: '$materialInfo' },
+      { $unwind: '$branchInfo' },
+      {
+        $project: {
+          materialName: '$materialInfo.name',
+          materialId: '$materialInfo._id',
+          branchName: '$branchInfo.branchName',
+          totalQuantity: 1
+        }
+      }
+    ]);
+
+    // Group by material
+    const usageByMaterial = usageData.reduce((acc, curr) => {
+      if (!acc[curr.materialName]) acc[curr.materialName] = { id: curr.materialId, branches: [], total: 0 };
+      acc[curr.materialName].branches.push({ branchName: curr.branchName, quantity: curr.totalQuantity });
+      acc[curr.materialName].total += curr.totalQuantity;
+      return acc;
+    }, {});
+
+    // 2. Branch demand comparison (Top consuming branch)
+    const demandComparison = await Transaction.aggregate([
+      { $match: { type: 'issue', createdAt: { $gte: thirtyDaysAgo } } },
+      {
+        $group: {
+          _id: '$branchId',
+          totalQuantity: { $sum: '$quantity' },
+          totalValue: { $sum: '$totalPrice' }
+        }
+      },
+      { $sort: { totalValue: -1 } },
+      {
+        $lookup: {
+          from: 'branches',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'branch'
+        }
+      },
+      { $unwind: '$branch' },
+      {
+        $project: {
+          branchName: '$branch.branchName',
+          totalQuantity: 1,
+          totalValue: 1
+        }
+      }
+    ]);
+
+    // 3. Restock prediction (Central Warehouse)
+    const centralWarehouse = await Branch.findOne({ isCentralWarehouse: true });
+    let restockPredictions = [];
+    if (centralWarehouse) {
+      const warehouseMaterials = await Material.find({ branchId: centralWarehouse._id, isActive: true });
+      
+      // Calculate average daily consumption over the last 30 days
+      for (const mat of warehouseMaterials) {
+        // Find total issued from branches for this material (matching name)
+        // or just calculate based on how much was transferred OUT of central warehouse
+        const transfersOut = await Transaction.aggregate([
+          { $match: { type: 'transfer', material: mat._id, createdAt: { $gte: thirtyDaysAgo }, fromBranch: centralWarehouse._id } },
+          { $group: { _id: null, totalQty: { $sum: '$quantity' } } }
+        ]);
+
+        const totalLast30Days = transfersOut[0]?.totalQty || 0;
+        const dailyVelocity = totalLast30Days / 30;
+
+        let daysUntilShortage = -1; // -1 means infinite/no data
+        if (dailyVelocity > 0) {
+          const daysToMin = (mat.quantity - mat.minStockLevel) / dailyVelocity;
+          daysUntilShortage = Math.max(0, Math.floor(daysToMin));
+        } else if (mat.quantity <= mat.minStockLevel) {
+          daysUntilShortage = 0;
+        }
+
+        let recommendedPurchase = 0;
+        if (daysUntilShortage !== -1 && daysUntilShortage < 15) { // Threshold for recommendation
+           // Recommend enough to cover 30 days + min stock
+           recommendedPurchase = Math.ceil((dailyVelocity * 30) + mat.minStockLevel - mat.quantity);
+           if (recommendedPurchase < 0) recommendedPurchase = 0;
+        }
+
+        restockPredictions.push({
+          materialName: mat.name,
+          unit: mat.unit,
+          currentStock: mat.quantity,
+          minStock: mat.minStockLevel,
+          dailyVelocity: dailyVelocity.toFixed(2),
+          daysUntilShortage,
+          recommendedPurchase,
+          status: daysUntilShortage === 0 ? 'Need Restock' : (daysUntilShortage > 0 && daysUntilShortage < 15) ? 'Approaching Shortage' : 'Healthy'
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        usageByMaterial,
+        demandComparison,
+        restockPredictions: restockPredictions.sort((a, b) => a.daysUntilShortage === -1 ? 1 : b.daysUntilShortage === -1 ? -1 : a.daysUntilShortage - b.daysUntilShortage)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 module.exports = {
   getDashboard,
@@ -513,4 +653,5 @@ module.exports = {
   getProjectConsumption,
   getCategoryDistribution,
   getContractorSupply,
+  getWarehouseAnalytics,
 };

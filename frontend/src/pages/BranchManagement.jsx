@@ -23,7 +23,7 @@ const BranchModal = ({ branch, managers, onClose, onSaved }) => {
     location: branch?.location || '',
     address: branch?.address || '',
     phone: branch?.phone || '',
-    managerId: branch?.managerId?._id || branch?.managerId || '',
+    managerName: branch?.managerName || '',
     status: branch?.status || 'active',
   });
   const [saving, setSaving] = useState(false);
@@ -109,20 +109,17 @@ const BranchModal = ({ branch, managers, onClose, onSaved }) => {
                 <option value="deactive">Deactivated</option>
               </select>
             </div>
+            <div className="mt-4">
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Assign Manager Name</label>
+              <input
+                className="input-field text-sm"
+                value={form.managerName}
+                onChange={e => setForm(f => ({ ...f, managerName: e.target.value }))}
+                placeholder="e.g. John Doe"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Assign Manager</label>
-            <select
-              className="input-field text-sm"
-              value={form.managerId}
-              onChange={e => setForm(f => ({ ...f, managerId: e.target.value }))}
-            >
-              <option value="">— No Manager Assigned —</option>
-              {managers.map(m => (
-                <option key={m._id} value={m._id}>{m.name} ({m.email})</option>
-              ))}
-            </select>
-          </div>
+
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
               Cancel
@@ -279,8 +276,10 @@ const BranchManagement = () => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 text-slate-600">
+                    <div className="flex items-center gap-1 text-slate-600">
                       <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-                      {branch.managerId?.name || <span className="text-slate-400 italic">Unassigned</span>}
+                      {branch.managerName || <span className="text-slate-400 italic">Unassigned</span>}
+                    </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">

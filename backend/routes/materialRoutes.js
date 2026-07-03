@@ -9,6 +9,7 @@ const {
   getLowStockMaterials,
   getCategories,
   fuzzySearch,
+  restockMaterial,
 } = require('../controllers/materialController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -25,6 +26,7 @@ router.get('/:id', getMaterial);
 // Manager & admin only
 router.post('/', authorize('admin', 'manager'), createMaterial);
 router.put('/:id', authorize('admin', 'manager'), updateMaterial);
+router.post('/:id/restock', authorize('admin', 'manager'), restockMaterial);
 router.delete('/:id', authorize('admin'), deleteMaterial);
 
 module.exports = router;
