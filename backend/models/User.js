@@ -31,6 +31,12 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Branch',
     },
+    assignedBranches: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Branch',
+      },
+    ],
     phone: {
       type: String,
       trim: true,

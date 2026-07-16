@@ -107,7 +107,11 @@ const getDashboard = async (req, res, next) => {
           { $group: { _id: null, total: { $sum: '$quantity' } } },
         ]);
 
-        const contractorCount = await User.countDocuments({ branchId: bid, role: 'contractor', isActive: true });
+        const contractorCount = await User.countDocuments({ 
+          $or: [{ branchId: bid }, { assignedBranches: bid }], 
+          role: 'contractor', 
+          isActive: true 
+        });
 
         return {
           branchId: bid,

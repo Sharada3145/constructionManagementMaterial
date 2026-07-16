@@ -13,12 +13,14 @@ import {
   DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import useReportDownload from '../hooks/useReportDownload';
+import VoiceAssistant from '../components/voice/VoiceAssistant';
 
 const IssueMaterials = () => {
   const { user } = useContext(AuthContext);
   const { downloadIssueReport, isDownloading } = useReportDownload();
   const [contractors, setContractors] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [allMaterials, setAllMaterials] = useState([]);
   
   // Existing vs New Contractor Toggle
   const [isNewContractor, setIsNewContractor] = useState(false);
@@ -46,17 +48,36 @@ const IssueMaterials = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [pRes] = await Promise.all([
+        const [pRes, mRes] = await Promise.all([
           axiosInstance.get('/projects'),
+          axiosInstance.get('/materials'),
           fetchContractors()
         ]);
         if (pRes.data.success) setProjects(pRes.data.data);
+        if (mRes.data.success) setAllMaterials(mRes.data.data);
       } catch (error) {
         console.error('Failed to fetch init data:', error);
       }
     };
     fetchData();
   }, []);
+
+  const handleVoiceResult = ({ contractor, material, quantity }) => {
+    // Fill contractor
+    setIsNewContractor(false);
+    setSelectedContractor(contractor._id);
+    
+    // Fill material and quantity in the first item slot
+    setItems([
+      { id: Date.now(), materialName: material.name, requestedQuantity: quantity, matchedMaterial: material, loading: false }
+    ]);
+    
+    toast.success(`Voice command parsed! Verify details below.`);
+  };
+
+  const handleVoiceValidationFail = (message) => {
+    toast.error(message);
+  };
 
   const handleAddItem = () => {
     setItems(prev => [...prev, { id: Date.now(), materialName: '', requestedQuantity: '', matchedMaterial: null, loading: false }]);
@@ -188,9 +209,17 @@ const IssueMaterials = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-10">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Issue Materials</h1>
-        <p className="text-sm text-slate-500 mt-1">Directly issue materials to a contractor. Stock will be updated immediately.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Issue Materials</h1>
+          <p className="text-sm text-slate-500 mt-1">Directly issue materials to a contractor. Stock will be updated immediately.</p>
+        </div>
+        <VoiceAssistant 
+          materials={allMaterials} 
+          contractors={contractors} 
+          onResult={handleVoiceResult} 
+          onValidationFail={handleVoiceValidationFail} 
+        />
       </div>
 
 

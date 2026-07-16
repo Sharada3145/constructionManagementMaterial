@@ -33,7 +33,10 @@ const issueMaterials = async (req, res, next) => {
     // Non-admin: ensure contractor belongs to same branch
     if (req.user.role !== 'admin' && branchId) {
       const contractorBranch = contractor.branchId?.toString();
-      if (contractorBranch && contractorBranch !== branchId.toString()) {
+      const assignedBranches = contractor.assignedBranches?.map(b => b.toString()) || [];
+      const branchIdStr = branchId.toString();
+
+      if (contractorBranch !== branchIdStr && !assignedBranches.includes(branchIdStr)) {
         return res.status(403).json({
           success: false,
           message: 'Cannot issue materials to a contractor from a different branch',
@@ -125,14 +128,20 @@ const getUsers = async (req, res, next) => {
     const query = { isActive: true };
     if (role) query.role = role;
 
-    // Non-admin: only see users from same branch
-    if (req.user.role !== 'admin') {
-      const userBranchId = req.user.branchId?._id || req.user.branchId;
-      if (userBranchId) query.branchId = userBranchId;
+    let targetBranchId = req.user.role === 'admin' 
+      ? (req.query.branchId || req.headers['x-branch-id']) 
+      : (req.user.branchId?._id || req.user.branchId);
+
+    if (targetBranchId) {
+      query.$or = [
+        { branchId: targetBranchId },
+        { assignedBranches: targetBranchId }
+      ];
     }
 
-    const users = await User.find(query).select('_id name email phone role branchId')
+    const users = await User.find(query).select('_id name email phone role branchId assignedBranches')
       .populate('branchId', 'branchName location')
+      .populate('assignedBranches', 'branchName location')
       .sort('name');
     res.status(200).json({ success: true, count: users.length, data: users });
   } catch (error) {

@@ -5,17 +5,31 @@ const { protect, authorize } = require('../middleware/auth');
 const router = express.Router();
 router.use(protect);
 
-// GET /api/users — list users (Admin only, with optional role filter)
-router.get('/', authorize('admin'), async (req, res, next) => {
+// GET /api/users — list users (Admin or Manager with restrictions)
+router.get('/', authorize('admin', 'manager'), async (req, res, next) => {
   try {
     const { role, branchId } = req.query;
     const filter = { isActive: true };
     if (role) filter.role = role;
-    if (branchId) filter.branchId = branchId;
+
+    let targetBranchId = branchId || req.headers['x-branch-id'];
+    
+    // Managers can only see users relevant to their branch
+    if (req.user.role === 'manager') {
+      targetBranchId = req.user.branchId?._id || req.user.branchId;
+    }
+
+    if (targetBranchId) {
+      filter.$or = [
+        { branchId: targetBranchId },
+        { assignedBranches: targetBranchId }
+      ];
+    }
 
     const users = await User.find(filter)
       .select('-password -resetPasswordToken -resetPasswordExpire')
       .populate('branchId', 'branchName location')
+      .populate('assignedBranches', 'branchName location')
       .sort('name');
 
     res.status(200).json({ success: true, count: users.length, data: users });

@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches  Branch[]
+  users     User[]
+  contractors Contractor[]
+  materials   Material[]
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  location  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id])
+  
+  users     User[]
+  contractorBranches ContractorBranch[]
+  materialRequests   MaterialRequest[]
+  issueReports       IssueReport[]
+  transfersFrom      Transfer[] @relation("TransfersFrom")
+  transfersTo        Transfer[] @relation("TransfersTo")
+  consumptionRecords ConsumptionRecord[]
+}
+
+enum Role {
+  SUPER_ADMIN
+  BRANCH_MANAGER
+  SITE_ENGINEER
+}
+
+model User {
+  id                  String   @id @default(uuid())
+  companyId           String
+  branchId            String?
+  email               String   @unique
+  password            String?
+  name                String
+  phone               String?
+  role                Role     @default(BRANCH_MANAGER)
+  isActive            Boolean  @default(true)
+  isVerified          Boolean  @default(false)
+  resetPasswordToken  String?
+  resetPasswordExpire String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id])
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+
+  issuedReports IssueReport[]
+  approvedRequests MaterialRequest[] @relation("ApprovedRequests")
+  requestedRequests MaterialRequest[] @relation("RequestedRequests")
+  approvedTransfers Transfer[] @relation("ApprovedTransfers")
+}
+
+model Contractor {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id])
+  
+  branches  ContractorBranch[]
+  issueReports IssueReport[]
+  materialRequests MaterialRequest[]
+}
+
+model ContractorBranch {
+  contractorId String
+  branchId     String
+
+  contractor   Contractor @relation(fields: [contractorId], references: [id])
+  branch       Branch     @relation(fields: [branchId], references: [id])
+
+  @@id([contractorId, branchId])
+}
+
+model Material {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  unit        String   // e.g. Bags, Kgs, Tons
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company  @relation(fields: [companyId], references: [id])
+  
+  requests    MaterialRequest[]
+  issueReports IssueReport[]
+  transfers   Transfer[]
+  consumptionRecords ConsumptionRecord[]
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model MaterialRequest {
+  id          String   @id @default(uuid())
+  branchId    String
+  contractorId String
+  materialId  String
+  quantity    Float
+  status      RequestStatus @default(PENDING)
+  requestedById String
+  approvedById String?
+  purpose     String?
+  projectName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  contractor  Contractor @relation(fields: [contractorId], references: [id])
+  material    Material @relation(fields: [materialId], references: [id])
+  requestedBy User     @relation("RequestedRequests", fields: [requestedById], references: [id])
+  approvedBy  User?    @relation("ApprovedRequests", fields: [approvedById], references: [id])
+}
+
+model IssueReport {
+  id          String   @id @default(uuid())
+  branchId    String
+  contractorId String
+  materialId  String
+  quantity    Float
+  issueDate   DateTime @default(now())
+  issuedById  String
+  purpose     String?
+  projectName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  contractor  Contractor @relation(fields: [contractorId], references: [id])
+  material    Material @relation(fields: [materialId], references: [id])
+  issuedBy    User     @relation(fields: [issuedById], references: [id])
+}
+
+model Transfer {
+  id             String   @id @default(uuid())
+  fromBranchId   String
+  toBranchId     String
+  materialId     String
+  quantity       Float
+  transferDate   DateTime @default(now())
+  approvedById   String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  fromBranch     Branch   @relation("TransfersFrom", fields: [fromBranchId], references: [id])
+  toBranch       Branch   @relation("TransfersTo", fields: [toBranchId], references: [id])
+  material       Material @relation(fields: [materialId], references: [id])
+  approvedBy     User     @relation("ApprovedTransfers", fields: [approvedById], references: [id])
+}
+
+model ConsumptionRecord {
+  id          String   @id @default(uuid())
+  branchId    String
+  materialId  String
+  quantity    Float
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  material    Material @relation(fields: [materialId], references: [id])
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  contactInfo String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

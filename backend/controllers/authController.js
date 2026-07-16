@@ -138,7 +138,7 @@ const getMe = async (req, res, next) => {
 // @access  Private
 const createContractor = async (req, res, next) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, assignedBranches, branchId } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -150,6 +150,21 @@ const createContractor = async (req, res, next) => {
     const resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     const resetPasswordExpire = Date.now() + 48 * 60 * 60 * 1000; // 48 hours for invite
 
+    // Automatically assign to manager's branch if created by manager
+    // For Admins, assign to the currently selected branch in the UI (x-branch-id)
+    let resolvedBranches = assignedBranches || [];
+    
+    let defaultBranchId = null;
+    if (req.user && req.user.role === 'manager') {
+      defaultBranchId = req.user.branchId?._id || req.user.branchId;
+    } else if (req.user && req.user.role === 'admin' && req.headers['x-branch-id']) {
+      defaultBranchId = req.headers['x-branch-id'];
+    }
+
+    if (defaultBranchId && !resolvedBranches.includes(defaultBranchId.toString())) {
+      resolvedBranches.push(defaultBranchId.toString());
+    }
+
     const user = await User.create({
       name,
       email,
@@ -158,6 +173,8 @@ const createContractor = async (req, res, next) => {
       isVerified: false,
       resetPasswordToken,
       resetPasswordExpire,
+      assignedBranches: resolvedBranches,
+      branchId: branchId || undefined,
       // No password generated
     });
 

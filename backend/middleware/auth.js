@@ -78,13 +78,36 @@ const getBranchFilter = (req) => {
 
   if (req.user.role === 'admin') {
     // Admin can filter by a specific branch via query param or header
-    const branchId = req.query.branchId || req.headers['x-branch-id'];
-    if (branchId) {
-      return { branchId: toOid(branchId) };
+    const reqBranchId = req.query.branchId || req.headers['x-branch-id'];
+    if (reqBranchId) {
+      return { branchId: toOid(reqBranchId) };
     }
     return {}; // No filter — sees all branches
   }
-  // Everyone else is scoped to their branch
+  
+  if (req.user.role === 'contractor') {
+    const reqBranchId = req.query.branchId || req.headers['x-branch-id'];
+    const assigned = req.user.assignedBranches || [];
+    
+    // If a specific branch is requested, verify the contractor is assigned to it
+    if (reqBranchId) {
+      const isAssigned = assigned.some(b => b.toString() === reqBranchId.toString()) || 
+                         (req.user.branchId && req.user.branchId.toString() === reqBranchId.toString());
+      if (isAssigned) {
+        return { branchId: toOid(reqBranchId) };
+      }
+    }
+    
+    // Otherwise, return all branches they are assigned to
+    const allAssigned = [...assigned];
+    if (req.user.branchId) allAssigned.push(req.user.branchId);
+    
+    if (allAssigned.length > 0) {
+      return { branchId: { $in: allAssigned.map(id => toOid(id)) } };
+    }
+  }
+
+  // Managers are scoped strictly to their own branch
   const branchId = req.user.branchId?._id || req.user.branchId;
   return { branchId: toOid(branchId) };
 };
