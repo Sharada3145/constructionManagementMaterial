@@ -133,7 +133,7 @@ const LoginPage = () => {
                 <span className="text-white font-bold">Admin:</span> admin@construction.com
               </div>
               <div className="bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/10 text-primary-200">
-                <span className="text-white font-bold">Pass:</span> 123456
+                <span className="text-white font-bold">Pass:</span> admin123
               </div>
             </div>
           </div>
